@@ -26,6 +26,30 @@ python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw <release-B-folde
 python ../oncosys-challenge/format/validate.py out/findings.json
 ```
 
+Judges' input on Saturday comes from a sealed envelope. Rehearse with the public practice one (on Windows, set `PYTHONUTF8=1` first or `unseal.py` crashes printing ✓):
+
+```bash
+PYTHONUTF8=1 python ../oncosys-challenge/envelopes/unseal.py practice orange meadow pilot lantern
+python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw ../oncosys-challenge/envelopes/opened/practice/release
+```
+
+On Windows, `unseal.py` reports a fingerprint mismatch for `protein_rppa.tsv.gz`. The cause is CRLF line endings from pandas; the content is identical. Tripwire's content hashes normalise line endings, so ours match the organizers' published hashes on any OS.
+
+## How the pieces plug together
+
+| Role | Plug-in point |
+| --- | --- |
+| 1 · Detection | Implement `tripwire.detect.detect_changes(release_a, release_b) -> list[Change]` (currently a stub). `Change` is in `tripwire/contract.py`, documented in `docs/CONTRACT.md`. |
+| 2 · Impact, verdicts, format | `tripwire/analyses.py` (A1, A2 and what each reads), `impact.py`, `verdicts.py`, `findings.py` |
+| 3 · Mutation Lab | Feed your answer key straight in: `python -m tripwire diff A B --changes my_changes.json`, or call `tripwire.findings.build(changes, Release(a), Release(b))` |
+| 4 · Interface | Read `findings.json`: `verdict`, `analyses[].verdict`, `.why` (verdict reason), `.impact` (why touched or left alone), `.before`/`.after`, `findings[]`, `repairs[]`, `settings` (stated tolerances). For the Question Gate, use `tripwire.verdicts.CheckResult` + `question_verdict`. |
+
+Even without a detector, Tripwire reruns the analyses the impact map calls unaffected. If one moved anyway, it is **Blocked** and reported as an unexplained change. So a detector miss can't turn into a false "Ready".
+
+```bash
+python -m pytest -q
+```
+
 ## Team
 
 See [PLAN.md](PLAN.md) for roles and [CONTRIBUTING.md](CONTRIBUTING.md) for how we work. `main` is locked; all work goes to `dev`.
