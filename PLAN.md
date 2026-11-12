@@ -1,5 +1,65 @@
 # Tripwire — Idea Brief and Team Plan
 
+> **Proposed update — not yet accepted.** The plan below remains the team's agreed plan until [plan-change proposal #2](https://github.com/Adhithyan245/tripwire/issues/2) is accepted by affected role owners and the repo owner. This section is a reviewable proposal, not authorization to merge dependent code. Update the relevant sections below as part of the accepted implementation PR, in accordance with CONTRIBUTING.md.
+
+## Proposal: question-aware decision rehearsal
+
+**Pitch:** Tripwire shows how a change in a data release affects a particular research question, what evidence supports the result, and what a reviewer would need to reconsider it.
+
+Keep Cohort Control Tower's release comparison, A1/A2 impact mapping and shared-format output. Add one connected workflow:
+
+1. **Question card:** The reviewer selects or supplies a structured card with intended use, cohort, outcome, required inputs and acceptable limitations. Start with a small, explicitly supported set of questions. Validate the card and show unsupported or missing fields; do not silently guess.
+2. **Evidence and impact:** Compare releases; show each supported finding with its source files, fields, counts or affected records, calculation, limitations and relevance to the selected question. Explain why other analyses are unaffected. Distinguish observed changes from suspected causes.
+3. **Decision rehearsal:** Preview one or two supported proposed actions, such as excluding a suspect record from a descriptive analysis or requiring a patient-grouped split. Recompute only what the available data and code support. A preview is not a source-data change, a repair, or evidence that a reviewer has approved the dataset.
+4. **Human review:** Record a reviewer decision (approve, reject, or request more evidence), the reasons and limitations, and the evidence needed to reconsider. Flag swaps and duplicates for curator review. Do not auto-apply repairs.
+5. **Check coverage:** List checks run, passed, failed, skipped or unavailable, with the reason. A missing required check or missing evidence must not be interpreted as a pass. The tool cannot claim leakage from duplicated patients alone: it should distinguish a potential risk from leakage demonstrated by an actual supplied split.
+
+A single release may produce different findings or verdicts for different questions **only when the data and documented rules support the difference**. Thresholds and minimums are prototype policy choices, not clinical standards; show their values and rationale. Do not claim clinical validity or use the tool for patient-level decisions.
+
+### Published Track 1 rubric
+
+The [event page](https://the-open-accelerator.com/hackathon/upcoming/OncoSysHack/) publishes the following weights. This replaces the need to rely on the fallback score lower in this document; no score is predicted for unbuilt or untested functionality.
+
+| Criterion | Points |
+| --- | ---: |
+| Finding supported data problems | 20 |
+| Reasoning for the research question | 20 |
+| Evidence and sources | 15 |
+| Safety and uncertainty | 15 |
+| Working tool and clear setup | 15 |
+| Useful next steps | 10 |
+| Communication | 5 |
+
+### Proposed MVP and cut order
+
+**First end-to-end slice:** detect at least one real change from supplied releases → connect it to a supported question and affected analysis → show checks and evidence → record a human review → export `findings.json` that passes the organizer validator. Then add additional detection coverage and a single computable decision preview. Do not treat a stub detector, a skipped check, or an untested setup as a completed slice.
+
+The question card, relevant checks, evidence, review, valid output, and unseen-input workflow are core. Cut in this order if behind: AI-written summary and free-text question translation; Mutation Lab interface (keep the smallest useful synthetic test harness); additional preview actions; visual polish; the preview itself. Never cut human review, required evidence, question-specific reasoning, or format validation to preserve a stretch feature. Site-confounding and other checks must state their assumptions and limitations; cut unsupported checks instead of implying they passed.
+
+**Estimate:** 6–12 team-hours beyond a working detection-to-findings pipeline for a minimal card, one preview, review record and coverage display. This is an unvalidated estimate; revisit after integration. The detector, format compatibility, and clean setup remain the critical path.
+
+### Proposed four-person allocation
+
+| Role | Scope |
+| --- | --- |
+| 1 · Detection | Detect changes in the supplied releases with source evidence and conservative handling of duplicates and low-information profiles. |
+| 2 · Impact, verdicts and format | Structured question card, dependencies, explicit verdict/check-coverage rules, analysis reruns and shared-format output. |
+| 3 · QA and integration | Synthetic mutations and false-positive cases, validator, blind practice run, practice-envelope timing and fresh-clone test. Report measured misses and denominators. |
+| 4 · Review experience and story | Evidence drill-down, supported action preview, reviewer record, setup documentation, video and demo. |
+
+Integrate the first slice before expanding coverage. Role assignments remain unfilled until the team agrees; this proposal does not change the shared change contract by itself.
+
+### Proposed demo and unseen-input rehearsal
+
+In three minutes: show equal release counts and an actual detected change; trace it to evidence and an affected analysis; change between two supported question cards and explain the difference; preview one supported action and its remaining limitations; record a human decision and show export. Never promise a verdict flip before seeing the data. Use a recorded backup. For Q&A, rehearse the organizer's [practice envelope](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/envelopes/README.md), run the actual tool on the unsealed input, and time the complete workflow; the event page recommends finishing within about a minute after unsealing.
+
+### Why this direction
+
+The organizer's [Cohort Control Tower brief](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/products/cohort-control-tower.md) requires release comparison, affected-analysis reruns and shared-format output. The rehearsal adds a clear, question-specific next step to that core. Previous TOA winners offer useful precedent, not evidence of this event's judges: [Retrieval Crew](https://the-open-accelerator.com/hackathon/past/RAGtheCityHack/Retrieval-Crew-Track-A-review.html) emphasized traceable answers and measured limitations; [Atlas Weave](https://the-open-accelerator.com/hackathon/past/Chart-the-Common-Wealth/) paired evidence with human approval. The current event's published rubric and rules control this project.
+
+---
+
+
 Nov 11, 2026 · @Adhithyan Aravind
 
 ## Summary
