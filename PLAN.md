@@ -53,6 +53,33 @@ Integrate the first slice before expanding coverage. Role assignments remain unf
 
 In three minutes: show equal release counts and an actual detected change; trace it to evidence and an affected analysis; change between two supported question cards and explain the difference; preview one supported action and its remaining limitations; record a human decision and show export. Never promise a verdict flip before seeing the data. Use a recorded backup. For Q&A, rehearse the organizer's [practice envelope](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/envelopes/README.md), run the actual tool on the unsealed input, and time the complete workflow; the event page recommends finishing within about a minute after unsealing.
 
+### Historical case: TCGA breast-cancer sample misalignment
+
+The motivation is a real case, not a claim about the contents of the event's frozen release. In [Yoo et al., MODMatcher (2014)](https://doi.org/10.1371/journal.pcbi.1003790), researchers examined 317 TCGA breast-cancer tumor samples with gene-expression and methylation profiles and reported eight misaligned tumor profile pairs. Two profiles were cross-aligned, suggesting a sample swap; comparison with miRNA data suggested the mRNA profiles were involved. After the authors' proposed realignment, the number of statistically identified methylation–expression associations rose from 9,195 to 9,252 under their study's thresholds. The 57-association difference belongs to that paper; it is not a Tripwire result or a clinical outcome.
+
+**Honest scope:** MODMatcher compared different modalities within a dataset. Tripwire's release comparison can catch an analogous change only when a suitable correct earlier baseline exists and the changed data type is covered. If the same error is already present in both releases, the release diff may miss it. Do not imply the historical error is in the current event data, that Tripwire would certainly have found it, or that Tripwire reproduces the authors' cross-modal method. Do not infer sensitive attributes, attempt re-identification, or link records to external information about individuals.
+
+### Proposed incident-inspired replay and evaluation
+
+Using only the event-approved frozen release, with original files unchanged:
+
+1. Verify Release A using the organizer's documented checksums. Make a local test copy B; never commit raw data or generated releases.
+2. Plant a two-profile swap in a data type the detector supports, preserving sample IDs and counts. Maintain a separate local test manifest with the known changes. This recreates a **failure pattern**, not the historical patient records. Use additional planted swaps, duplicates, omissions and other supported changes only after the first slice works.
+3. Freeze the analysis question and calculation before inspecting results. Compare A and B, record findings and their evidence, run the chosen analysis, and show the measured difference with denominators and limitations. A changed result is possible, not guaranteed; report the observed outcome.
+4. Preview a supported exclusion or restoration on an overlay without changing the source release. Show the recalculated result, the evidence needed to confirm the proposed action, and the remaining uncertainty. Record a human decision; do not auto-apply a repair.
+5. Test a byte-identical copy and an equivalent reordered copy as no-change controls. Where possible keep some seeded cases hidden from detector development. Report true positives, false positives and false negatives, with precision and recall by fault type and denominators. Account for missing or inapplicable cases instead of reporting one inflated aggregate. Exact profile equality is evidence to investigate, not proof of a mistaken identity; distinguish legitimate replicates from suspected errors.
+6. Rehearse the organizer's practice envelope and validate the exported `findings.json`. Separately document that replay performance on planted changes does not establish accuracy on the historical incident or all unseen releases.
+
+**Illustration, not a Tripwire benchmark:** An eight-record toy calculation exchanged two scalar values while retaining eight records. The difference between two group means moved from 8.0 to 2.5 and returned to 8.0 after the known original values were restored. This example uses invented values and a known reference, not patient data; it is not an observed effect in the challenge data. Replace it in a live demo with actual results from the approved-data replay, or label it clearly as a toy.
+
+**Suggested demo framing:** “Researchers documented a breast-cancer data alignment problem. We simulated an analogous swap in the event data: the count stayed the same, the detector reported [measured finding], and the preselected analysis moved [measured before/after]. A reviewer can inspect the evidence and test a proposed action. Our release comparison cannot detect an error shared by both releases.” Do not fill in bracketed results until actually measured.
+
+### Mock judge feedback — not official scores
+
+Three independent model reviewers assessed the concept without executing Tripwire. Claude and Grok judged the limited described current evidence at 40/100 and 25/100 respectively; an OpenAI reviewer estimated 74/100 **conditional on the proposed workflow working**. The inputs and assumptions differ, so these numbers are not directly comparable and are not a prediction of the event outcome. The [official rubric](https://the-open-accelerator.com/hackathon/upcoming/OncoSysHack/) and actual organizer judges control.
+
+Common improvements: replace the stub detector; test on unseen changes and no-change controls; show how a specified research question changes the analysis and decision; trace conclusions to the actual calculations and source fields; show checks not run and release-diff blind spots; make review and reproducible setup observable. Demonstrated results matter more than the mock scores.
+
 ### Why this direction
 
 The organizer's [Cohort Control Tower brief](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/products/cohort-control-tower.md) requires release comparison, affected-analysis reruns and shared-format output. The rehearsal adds a clear, question-specific next step to that core. Previous TOA winners offer useful precedent, not evidence of this event's judges: [Retrieval Crew](https://the-open-accelerator.com/hackathon/past/RAGtheCityHack/Retrieval-Crew-Track-A-review.html) emphasized traceable answers and measured limitations; [Atlas Weave](https://the-open-accelerator.com/hackathon/past/Chart-the-Common-Wealth/) paired evidence with human approval. The current event's published rubric and rules control this project.
