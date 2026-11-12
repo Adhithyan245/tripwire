@@ -154,3 +154,12 @@ def test_missing_or_skipped_check_is_never_ready():
 def test_contract_rejects_unknown_type():
     with pytest.raises(ValueError):
         Change("TCGA-T0-0001-01", "teleported", "clinical.tsv")
+
+
+def test_reordered_copy_is_a_no_change_control(releases):
+    """Same data, rows and columns shuffled: nothing changed, so nothing may be reported."""
+    a, b, clinical, protein = releases
+    write(b, clinical.sample(frac=1, random_state=1), protein[protein.columns[::-1]].iloc[::-1])
+    doc = build([], Release(a), Release(b))
+    assert doc["verdict"] == "Ready" and doc["findings"] == []
+    assert all(x["status"] == "unchanged" for x in doc["analyses"])
