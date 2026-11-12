@@ -1,5 +1,3 @@
-# Plan, contract and governance changes need the repo owner's review.
-PLAN.md            @Adhithyan245
-docs/CONTRACT.md   @Adhithyan245
-CONTRIBUTING.md    @Adhithyan245
-.github/           @Adhithyan245
+# The repo owner reviews everything that goes into main.
+# Teammates can't push to main directly; a PR into main needs @Adhithyan245's approval.
+*   @Adhithyan245

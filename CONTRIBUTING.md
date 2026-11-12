@@ -6,7 +6,7 @@
 
 | Branch | Who pushes | How |
 | --- | --- | --- |
-| `main` | Nobody | **Locked.** It is only opened by the repo owner (@Adhithyan245) for the scheduled releases and the final submission. |
+| `main` | Only the repo owner (@Adhithyan245) | **Closed to everyone else.** Teammates can't push to it. A pull request into `main` needs the owner's approval. The owner moves `dev` to `main` for the scheduled releases and the final submission. |
 | `dev` | Everyone | Integration branch. Push or open a pull request here. No force pushes, no deleting it. |
 | `role1/*`, `role2/*`, `role3/*`, `role4/*` | The role owner | Your working branches. Merge into `dev` through a pull request. |
 
