@@ -27,7 +27,17 @@ def main(argv=None):
     d.add_argument("--hash-b", choices=["file", "content"], default="content")
     d.add_argument("--no-verify-unaffected", action="store_true", help="don't rerun analyses the impact map says are unaffected")
     d.add_argument("--challenge-dir", help="path to the challenge repo (for the validator)")
+    d.add_argument("--question", help="question-card id: makes the top-level question and verdict that card's "
+                                      "(see `python -m tripwire questions`)")
+    sub.add_parser("questions", help="list the supported question cards")
     args = p.parse_args(argv)
+
+    if args.cmd == "questions":
+        from .questions import CARDS
+        for c in CARDS:
+            print(f"{c.id:<34} {c.intended_use:<15} {c.title}")
+            print(f"{'':<34} inputs: {', '.join(c.files)}; checks: {', '.join(c.required_checks)}")
+        return 0
 
     t0 = time.time()
     a, b = Release(args.release_a, args.name_a), Release(args.release_b, args.name_b)
@@ -36,7 +46,8 @@ def main(argv=None):
     else:
         from .detect import detect_changes
         changes = detect_changes(a, b)
-    doc = build(changes, a, b, args.hash_a, args.hash_b, verify_unaffected=not args.no_verify_unaffected)
+    doc = build(changes, a, b, args.hash_a, args.hash_b, verify_unaffected=not args.no_verify_unaffected,
+                question=args.question)
 
     out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -45,6 +56,10 @@ def main(argv=None):
     print(f"Tripwire: {a.name} -> {b.name}   overall verdict: {doc['verdict']}")
     for an in doc["analyses"]:
         print(f"  {an['id']:<3} {an['verdict']:<22} {an['why']}")
+    print("  Questions:")
+    for q in doc["questions"]:
+        mark = "*" if q["id"] == args.question else " "
+        print(f" {mark} {q['id']:<34} {q['verdict']:<22} {q['why'][:110]}")
     print(f"  {len(doc['findings'])} finding(s), {len(doc['repairs'])} proposed repair(s) (none applied)")
     try:
         errs = validate(doc, args.challenge_dir)

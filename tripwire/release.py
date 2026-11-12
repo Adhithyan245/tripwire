@@ -56,6 +56,17 @@ class Release:
     def protein(self) -> pd.DataFrame:
         return pd.read_csv(self.path / "protein_rppa.tsv.gz", sep="\t", index_col=0)
 
+    def table(self, name: str) -> pd.DataFrame:
+        """Any molecular file: features as rows, samples as columns. Cached."""
+        if name == "clinical.tsv":
+            return self.clinical
+        if name == "protein_rppa.tsv.gz":
+            return self.protein
+        cache = self.__dict__.setdefault("_tables", {})
+        if name not in cache:
+            cache[name] = pd.read_csv(self.path / name, sep="\t", index_col=0)
+        return cache[name]
+
     def fingerprints(self, hash_of: str = "file") -> list[dict]:
         fn = content_sha256 if hash_of == "content" else file_sha256
         out = []

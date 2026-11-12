@@ -100,8 +100,15 @@ def _ref(ch: Change, release_name: str, note: str | None = None) -> dict:
 
 
 def build(changes: list[Change], release_a: Release, release_b: Release,
-          hash_a: str = "file", hash_b: str = "content", verify_unaffected: bool | None = None) -> dict:
+          hash_a: str = "file", hash_b: str = "content", verify_unaffected: bool | None = None,
+          question: str | None = None) -> dict:
+    """question: a question-card id. When given, the top-level question and verdict are that card's.
+    Every supported card is always assessed and listed under "questions"."""
+    from .questions import BY_ID, CARDS, assess
+    if question is not None and question not in BY_ID:
+        raise ValueError(f"unknown question card {question!r}; supported: {', '.join(BY_ID)}")
     verify = CONFIG["verify_unaffected"] if verify_unaffected is None else verify_unaffected
+    change_finding: dict[int, str] = {}
     A, B = release_a.name, release_b.name
     impacts = map_impact(changes, release_a, release_b)
 
@@ -140,6 +147,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         chs = [changes[i] for i in idx]
         ch0, kind, file = chs[0], chs[0].change_type, chs[0].file
         fid = f"F{len(findings) + 1}"
+        change_finding.update({i: fid for i in idx})
         affects = sorted({aid for aid, imp in impacts.items() if set(idx) & set(imp.touched_by)})
         not_aff = sorted(set(impacts) - set(affects))
         ids = {c.sample_id for c in chs} | {c.related_sample_id for c in chs if c.related_sample_id}
@@ -171,8 +179,10 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                         "justification": just.format(A=A, file=file) + " Proposed only; never applied automatically.",
                         "addresses": [fid]})
 
+    unexplained_finding: dict[str, str] = {}
     for a, before, after, mv in unexplained:
         fid = f"F{len(findings) + 1}"
+        unexplained_finding[a.id] = fid
         findings.append({
             "id": fid, "kind": "other",
             "summary": f"{a.id} ({a.title}) moved between releases but no detected change explains it: {mv.magnitude}. "
@@ -191,7 +201,26 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                         "justification": f"Hold {a.id} results until a curator finds what changed in {', '.join(a.files)}. "
                                          "Proposed only; never applied automatically.", "addresses": [fid]})
 
+    # ---- question cards: same release, a verdict per supported question
+    by_analysis = {x["id"]: x for x in analyses_out}
+    questions = []
+    for card in CARDS:
+        q = assess(card, changes, release_a, release_b, by_analysis)
+        rel = {change_finding[i] for i in q.pop("relevant_changes") if i in change_finding}
+        if card.analysis_id in unexplained_finding:
+            rel.add(unexplained_finding[card.analysis_id])
+        q["relevant_findings"] = sorted(rel, key=lambda f: int(f[1:]))
+        questions.append(q)
+    for f in findings:
+        f["relevant_questions"] = [q["id"] for q in questions if f["id"] in q["relevant_findings"]]
+
     names = " and ".join(f"{a.id} ({a.title})" for a in ANALYSES)
+    top_q = f"Did release {B} change anything that affects analyses {names}?"
+    top_v = worst(verdicts.values())
+    if question is not None:
+        card_q = next(q for q in questions if q["id"] == question)
+        top_q = f"Given release {B}: {card_q['title']} (intended use: {card_q['intended_use']})"
+        top_v = card_q["verdict"]
     return {
         "format_version": "0.2",
         "producer": {"team": CONFIG["producer_team"], "product": "Cohort Control Tower", "track": "cohort-firewall",
@@ -199,11 +228,12 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         "data": {"dataset": "TCGA-BRCA", "releases": [
             {"name": A, "files": release_a.fingerprints(hash_a)},
             {"name": B, "files": release_b.fingerprints(hash_b)}]},
-        "question": f"Did release {B} change anything that affects analyses {names}?",
-        "verdict": worst(verdicts.values()),
+        "question": top_q,
+        "verdict": top_v,
         "findings": findings,
         "analyses": analyses_out,
         "repairs": repairs,
+        "questions": questions,
         "settings": {k: v for k, v in CONFIG.items() if k != "producer_team"},
         "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
     }
