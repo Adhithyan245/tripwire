@@ -167,7 +167,7 @@ Projected score is about **86/100** on a fallback rubric, if executed well. The 
 
 ## Team plan
 
-Four people work in parallel from hour one by building against one shared data contract. Fill in names in the Owner column.
+Four people work in parallel from hour one by building against one shared data contract. Owners assigned Nov 12 by the repo owner; each owner confirms in the PR.
 
 ### The shared contract (agree Thursday morning, 30 minutes, all four)
 
@@ -189,10 +189,10 @@ One detected change looks like this. The detector writes these, the Mutation Lab
 
 | Role | Owner | Owns | Done when |
 | --- | --- | --- | --- |
-| 1. Detection engine |  | Fingerprints, swaps, duplicates, appeared and disappeared samples, label and sample-type changes, subgroup coverage loss; Friday: the three readiness checks | Catches practice B's changes without reading `CHANGES.json` |
-| 2. Impact, verdicts and format |  | Dependency map for A1 and A2, reruns, before and after, verdict engine for both modes, `findings.json`, validator | Output validates; A1 flagged and A2 left alone from logic |
-| 3. Mutation Lab and QA |  | Change generator, detection-rate report, pytest suite, questions with known answers, clean-clone run, Gitleaks, Checkpoint 2 | Reports "catches X of Y"; a fresh clone runs from the README alone |
-| 4. Interface, Question Gate and story |  | Streamlit app, Question Gate (LLM call plus spec form), README, demo video, 3-minute pitch, optional AI summary | A judge reaches a verdict without anyone explaining |
+| 1. Detection engine | Madhan (@MadhanJ05) | Fingerprints, swaps, duplicates, appeared and disappeared samples, label and sample-type changes, subgroup coverage loss; Friday: the three readiness checks | Catches practice B's changes without reading `CHANGES.json` |
+| 2. Impact, verdicts and format | Adhithyan (@Adhithyan245) | Dependency map for A1 and A2, reruns, before and after, verdict engine for both modes, `findings.json`, validator | Output validates; A1 flagged and A2 left alone from logic |
+| 3. Mutation Lab and QA | Hemnaath (@hemnaath04) | Change generator, detection-rate report, pytest suite, questions with known answers, clean-clone run, Gitleaks, Checkpoint 2 | Reports "catches X of Y"; a fresh clone runs from the README alone |
+| 4. Interface, Question Gate and story | Annamayya (@Annamayya9) | Streamlit app, Question Gate (LLM call plus spec form), README, demo video, 3-minute pitch, optional AI summary | A judge reaches a verdict without anyone explaining |
 
 **Who fits which role:** Role 1 is the strongest pandas person. Role 2 is the most careful engineer, since it's the critical path and must not also present. Role 3 likes breaking things. Role 4 is the best communicator and builds against a hand-written mock `findings.json` from the start.
 
@@ -249,5 +249,5 @@ Tick these off before the Saturday 2:15 PM ET code freeze.
 **Open questions:**
 
 - What does the official Track 1 rubric weight? Re-score this plan against it.
-- Who owns each role? Fill in the Owner column above.
+- ~~Who owns each role?~~ Assigned Nov 12 (see Roles). Presenter: Role 4 (Annamayya); technical Q&A: Role 2 (Adhithyan).
 - Which team are we paired with for Checkpoint 2, and will they build a Repair Review Desk for the finale handoff?
