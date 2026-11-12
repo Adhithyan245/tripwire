@@ -48,13 +48,16 @@ CHECK_STATUS_TO_VERDICT = {
     "fixable": "Conditional",
     "insufficient": "Insufficient Evidence",
     "fail": "Blocked",
+    # A check that didn't run is missing evidence, never a pass.
+    "skipped": "Insufficient Evidence",
+    "unavailable": "Insufficient Evidence",
 }
 
 
 @dataclass
 class CheckResult:
     name: str                 # "patient_leakage", "site_confounding", "sample_size"
-    status: str               # pass | fixable | insufficient | fail
+    status: str               # pass | fixable | insufficient | fail | skipped | unavailable
     summary: str
     evidence: list[dict] = field(default_factory=list)  # evidence refs in findings.json shape
     fix: str | None = None    # for "fixable", what to do (e.g. "split by patient_id")
@@ -64,7 +67,19 @@ class CheckResult:
             raise ValueError(f"status must be one of {sorted(CHECK_STATUS_TO_VERDICT)}")
 
 
-def question_verdict(checks: list[CheckResult]) -> AnalysisVerdict:
+def coverage(checks: list[CheckResult], required: list[str]) -> dict[str, list[str]]:
+    """Which checks ran, passed, failed, were skipped or unavailable, and which required ones are missing.
+    Shown in the interface so a gap is never read as readiness."""
+    out = {s: [c.name for c in checks if c.status == s] for s in CHECK_STATUS_TO_VERDICT}
+    out["missing"] = [r for r in required if r not in {c.name for c in checks}]
+    return out
+
+
+def question_verdict(checks: list[CheckResult], required: list[str] | None = None) -> AnalysisVerdict:
+    """A required check that is missing counts as unavailable: the verdict can't be better than Insufficient Evidence."""
+    have = {c.name for c in checks}
+    checks = list(checks) + [CheckResult(r, "unavailable", "required check did not run")
+                             for r in (required or []) if r not in have]
     if not checks:
         return AnalysisVerdict("Insufficient Evidence", "No readiness checks ran.")
     v = worst(CHECK_STATUS_TO_VERDICT[c.status] for c in checks)

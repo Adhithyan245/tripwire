@@ -8,7 +8,7 @@ from tripwire.findings import build
 from tripwire.impact import map_impact
 from tripwire.release import Release, content_sha256
 from tripwire.validate import challenge_dir, validate
-from tripwire.verdicts import CheckResult, question_verdict
+from tripwire.verdicts import CheckResult, coverage, question_verdict
 
 
 def er_pair(clinical, protein):
@@ -138,6 +138,17 @@ def test_question_verdicts():
     assert question_verdict([]).verdict == "Insufficient Evidence"
     with pytest.raises(ValueError):
         CheckResult("x", "maybe", "")
+
+
+def test_missing_or_skipped_check_is_never_ready():
+    ok = CheckResult("sample_size", "pass", "ok")
+    assert question_verdict([ok, CheckResult("site_confounding", "skipped", "no site field")]).verdict == "Insufficient Evidence"
+    assert question_verdict([ok], required=["sample_size", "patient_leakage"]).verdict == "Insufficient Evidence"
+    assert question_verdict([ok], required=["sample_size"]).verdict == "Ready"
+    # a real failure still outranks missing evidence
+    assert question_verdict([CheckResult("patient_leakage", "fail", "x")], required=["sample_size"]).verdict == "Blocked"
+    cov = coverage([ok, CheckResult("site_confounding", "unavailable", "")], ["sample_size", "patient_leakage"])
+    assert cov["pass"] == ["sample_size"] and cov["unavailable"] == ["site_confounding"] and cov["missing"] == ["patient_leakage"]
 
 
 def test_contract_rejects_unknown_type():
