@@ -30,6 +30,32 @@ class Movement:
 
 
 @dataclass
+class SliceDiff:
+    """Sample-by-sample comparison of exactly what an analysis reads, in release A and B."""
+    added: list[str]                          # in B's slice only
+    removed: list[str]                        # in A's slice only
+    changed: list[tuple[str, str, str]]       # (sample, before, after)
+    identical: int
+
+    @property
+    def any(self) -> bool:
+        return bool(self.added or self.removed or self.changed)
+
+    def counts(self) -> dict:
+        return {"added": len(self.added), "removed": len(self.removed), "values_changed": len(self.changed),
+                "identical": self.identical}
+
+
+def slice_diff(a: dict[str, tuple], b: dict[str, tuple]) -> SliceDiff:
+    """a, b: sample -> (comparison key, display text)."""
+    ka, kb = {norm_id(s): s for s in a}, {norm_id(s): s for s in b}
+    common = ka.keys() & kb.keys()
+    changed = sorted((kb[k], a[ka[k]][1], b[kb[k]][1]) for k in common if a[ka[k]][0] != b[kb[k]][0])
+    return SliceDiff(sorted(kb[k] for k in kb.keys() - ka.keys()), sorted(ka[k] for k in ka.keys() - kb.keys()),
+                     changed, len(common) - len(changed))
+
+
+@dataclass
 class Analysis:
     id: str
     title: str
@@ -39,6 +65,7 @@ class Analysis:
     eligible: Callable[[Release], set[str]]  # normalised IDs that could enter it
     run: Callable[[Release], dict]
     compare: Callable[[dict, dict], Movement]
+    slice: Callable[[Release], dict[str, tuple]]  # sample -> (key, display): exactly what it reads per sample
 
 
 # ---------- A1: ER-alpha protein by clinical ER status ----------
@@ -53,6 +80,17 @@ def a1_run(r: Release) -> dict:
     return {"n_samples": len(samples), "n_positive": int(pos.size), "n_negative": int(neg.size),
             "mean_positive": round(mp, 3), "mean_negative": round(mn, 3), "difference": round(mp - mn, 3),
             "sample_ids": sorted(samples)}
+
+
+def a1_slice(r: Release) -> dict[str, tuple]:
+    er = r.clinical.set_index("sampleID")[ER_COL]
+    row = r.protein.loc["ERALPHA"]
+    out = {}
+    for s in r.protein.columns:
+        if is_primary(s) and er.get(s) in ("Positive", "Negative"):
+            v = float(row[s])
+            out[s] = ((er[s], repr(v)), f"ER {er[s]}, ERALPHA {v:.3f}")
+    return out
 
 
 def a1_eligible(r: Release) -> set[str]:
@@ -82,6 +120,11 @@ def a2_run(r: Release) -> dict:
             "sample_ids": sorted(c.sampleID)}
 
 
+def a2_slice(r: Release) -> dict[str, tuple]:
+    c = r.clinical[r.clinical.sampleID.str[13:15] == "01"].dropna(subset=[PAM50_COL])
+    return {s: (v, f"PAM50 {v}") for s, v in zip(c.sampleID, c[PAM50_COL])}
+
+
 def a2_eligible(r: Release) -> set[str]:
     return {norm_id(s) for s in r.clinical["sampleID"] if is_primary(s)}
 
@@ -107,12 +150,12 @@ ANALYSES: list[Analysis] = [
              ["clinical.tsv", "protein_rppa.tsv.gz"],
              {"clinical.tsv": {"sampleID", ER_COL}, "protein_rppa.tsv.gz": {"ERALPHA"}},
              "primary tumors (code 01) with protein data and clinical ER status Positive or Negative",
-             a1_eligible, a1_run, a1_compare),
+             a1_eligible, a1_run, a1_compare, a1_slice),
     Analysis("A2", "RNA subtype mix of primary tumors",
              ["clinical.tsv"],
              {"clinical.tsv": {"sampleID", PAM50_COL}},
              "primary tumors (code 01) in clinical.tsv with a PAM50 RNA-seq call",
-             a2_eligible, a2_run, a2_compare),
+             a2_eligible, a2_run, a2_compare, a2_slice),
 ]
 
 

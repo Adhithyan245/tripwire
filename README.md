@@ -26,14 +26,25 @@ python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw <release-B-folde
 python ../oncosys-challenge/format/validate.py out/findings.json
 ```
 
-Judges' input on Saturday comes from a sealed envelope. Rehearse with the public practice one (on Windows, set `PYTHONUTF8=1` first or `unseal.py` crashes printing ✓):
+### Saturday: the sealed envelope, in one command
+
+The judge gives an envelope number and a four-word code. One command opens it with the organizers' `unseal.py`, compares the release with release A, and writes `out/findings-<envelope>.json`, which is validated:
 
 ```bash
-PYTHONUTF8=1 python ../oncosys-challenge/envelopes/unseal.py practice orange meadow pilot lantern
-python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw ../oncosys-challenge/envelopes/opened/practice/release
+python -m tripwire envelope 07 amber falcon river quartz
 ```
 
-On Windows, `unseal.py` reports a fingerprint mismatch for `protein_rppa.tsv.gz`. The cause is CRLF line endings from pandas; the content is identical. Tripwire's content hashes normalise line endings, so ours match the organizers' published hashes on any OS.
+Rehearse with the public practice envelope:
+
+```bash
+python -m tripwire envelope practice orange meadow pilot lantern
+```
+
+The command runs `unseal.py` unchanged, on any OS. On Windows it fixes two problems with running it directly. The script's check marks crash the console, so it sets `PYTHONUTF8=1`. And pandas would write CRLF line endings, so the script's own fingerprint check would report a false mismatch; it has pandas write LF, as on macOS and Linux (`tripwire/unseal_lf.py`). An envelope that's already open is compared without unsealing again.
+
+### Human-readable report
+
+Every `diff` also writes `findings.html` next to `findings.json`: the verdicts, each analysis with before and after values, each finding with its evidence, severity reason and limitation, proposed repairs (none applied), research questions when present, tolerances, and file fingerprints. It's a single self-contained page (no scripts), so it opens anywhere and prints cleanly. Use `--no-report` to skip it, or `python -m tripwire report out/findings.json` to rebuild it.
 
 ### Dashboard
 
@@ -63,6 +74,15 @@ Even without a detector, Tripwire reruns the analyses the impact map calls unaff
 ```bash
 python -m pytest -q
 ```
+
+### Question cards
+
+```bash
+python -m tripwire questions                       # list the supported research questions
+python -m tripwire diff <A> <B> --question predict_er_from_protein
+```
+
+Every run assesses every supported card and writes them under `questions` in `findings.json`, each with its `verdict`, `why`, `release_part`, `checks`, `coverage` and `relevant_findings`. `--question` makes one card the top-level question and verdict. A card whose inputs aren't in the release says the data can't answer it. A required check that hasn't been built shows as `unavailable` and is never counted as a pass.
 
 ## Team
 

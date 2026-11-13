@@ -163,3 +163,35 @@ def test_reordered_copy_is_a_no_change_control(releases):
     doc = build([], Release(a), Release(b))
     assert doc["verdict"] == "Ready" and doc["findings"] == []
     assert all(x["status"] == "unchanged" for x in doc["analyses"])
+
+
+def test_undetected_swap_cites_both_swapped_samples(releases):
+    """A swap keeps both IDs, so membership doesn't change: the slice check must still cite both samples."""
+    a, b, clinical, protein = releases
+    x, y = er_pair(clinical, protein)
+    write(b, clinical, swapped(protein, x, y))
+    doc = build([], Release(a), Release(b))
+    f = next(f for f in doc["findings"] if f["affects_analyses"] == ["A1"])
+    cited = {e["id"] for e in f["evidence"] if e["kind"] == "sample"}
+    assert cited == {x, y}  # exactly the changed samples: nothing unchanged is flagged
+    a1 = next(an for an in doc["analyses"] if an["id"] == "A1")
+    assert a1["input_changes"]["values_changed"] == 2
+
+
+def test_undetected_change_that_does_not_move_result_is_conditional(releases):
+    """Swap two samples inside the same ER group: the means don't move, but the inputs did change."""
+    a, b, clinical, protein = releases
+    er = clinical.set_index("sampleID")["breast_carcinoma_estrogen_receptor_status"]
+    pos = [c for c in protein.columns if c[13:15] == "01" and er[c] == "Positive"][:2]
+    write(b, clinical, swapped(protein, *pos))
+    doc = build([], Release(a), Release(b))
+    a1 = next(an for an in doc["analyses"] if an["id"] == "A1")
+    assert a1["status"] == "unchanged" and a1["verdict"] == "Conditional"
+    assert {e["id"] for f in doc["findings"] for e in f["evidence"] if e["kind"] == "sample"} == set(pos)
+
+
+def test_ready_reason_states_identical_samples(releases):
+    a, _, _, _ = releases
+    doc = build([], Release(a), Release(a, name="again"))
+    a2 = next(an for an in doc["analyses"] if an["id"] == "A2")
+    assert "identical in both releases" in a2["why"] and a2["input_changes"]["identical"] > 0
