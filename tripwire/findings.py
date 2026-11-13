@@ -83,7 +83,9 @@ def _summary(kind: str, chs: list[Change], file: str, sub: str, count_note: str)
         "value_shift": lambda: f"{n} sample(s) in {file} changed values without a swap or copy.",
         "coverage_loss": lambda: f"Missing data rose for a subgroup in {file} ({n} sample(s)).",
     }[kind]()
-    if sub:
+    if sub and kind == "duplicate" and sub.startswith("copied"):
+        s += f" By release-A labels: {sub}."
+    elif sub:
         s += f" Affected samples by release-A labels: {sub}."
     if count_note:
         s += f" {count_note}"
@@ -153,7 +155,14 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         affects = sorted({aid for aid, imp in impacts.items() if set(idx) & set(imp.touched_by)})
         not_aff = sorted(set(impacts) - set(affects))
         ids = {c.sample_id for c in chs} | {c.related_sample_id for c in chs if c.related_sample_id}
-        sub = _subgroups(ids, release_a.clinical) if release_a.has("clinical.tsv") else ""
+        sub = ""
+        if release_a.has("clinical.tsv"):
+            if kind == "duplicate" and any(c.related_sample_id for c in chs):
+                src = _subgroups({c.related_sample_id for c in chs if c.related_sample_id}, release_a.clinical)
+                own = _subgroups({c.sample_id for c in chs}, release_a.clinical)
+                sub = f"copied from samples labelled {src}" + (f"; the copies sit under IDs labelled {own}" if own else "")
+            else:
+                sub = _subgroups(ids, release_a.clinical)
         count_note = ""
         if kind in ("appeared", "disappeared") and a_count.get(file) is not None and a_count.get(file) == b_count.get(file):
             count_note = f"The total sample count in {file} is unchanged ({a_count[file]}), so a count check would miss this."
