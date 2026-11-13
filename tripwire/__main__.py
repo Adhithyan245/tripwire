@@ -27,7 +27,18 @@ def main(argv=None):
     d.add_argument("--hash-b", choices=["file", "content"], default="content")
     d.add_argument("--no-verify-unaffected", action="store_true", help="don't rerun analyses the impact map says are unaffected")
     d.add_argument("--challenge-dir", help="path to the challenge repo (for the validator)")
+    d.add_argument("--no-report", action="store_true", help="don't write the HTML report next to findings.json")
+    r = sub.add_parser("report", help="write the human-readable HTML report for an existing findings.json")
+    r.add_argument("findings")
+    r.add_argument("--out", help="default: same name as the findings file, .html")
     args = p.parse_args(argv)
+
+    if args.cmd == "report":
+        from .report import write_report
+        src = pathlib.Path(args.findings)
+        dest = write_report(json.loads(src.read_text()), args.out or src.with_suffix(".html"))
+        print(f"wrote {dest}")
+        return 0
 
     t0 = time.time()
     a, b = Release(args.release_a, args.name_a), Release(args.release_b, args.name_b)
@@ -55,6 +66,9 @@ def main(argv=None):
         errs = []
         print(f"  validator skipped: {e}")
     print(f"  wrote {out} in {time.time() - t0:.1f}s")
+    if not args.no_report:
+        from .report import write_report
+        print(f"  report: {write_report(doc, out.with_suffix('.html'))}")
     return 1 if errs else 0
 
 
