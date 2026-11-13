@@ -155,3 +155,43 @@ def home(headline: str, text: str) -> str:
 
 def legend(items: dict[str, str]) -> str:
     return '<div class="tw-legend">' + "".join(f'<div>{pill(k)}<br>{esc(v)}</div>' for k, v in items.items()) + "</div>"
+
+
+PLAN_CSS = """
+<style>
+.tw-plan{border:1px solid var(--line);border-radius:16px;background:var(--card);padding:16px 18px;margin:12px 0}
+.tw-plan h4{margin:0 0 10px;font-size:17px;color:var(--ink)}
+.tw-st{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.tw-st:first-of-type{border-top:none}
+.tw-n{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;font-size:13px;
+display:grid;place-items:center}
+.tw-who{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+color:var(--accent);margin-right:6px}
+.tw-act{font-weight:650;color:var(--ink);font-size:14.5px}
+.tw-why{font-size:13px;color:var(--ink-2);margin-top:2px}
+.tw-eff{font-size:13px;color:var(--ink);margin-top:4px;background:#2a78d60d;border-radius:8px;padding:4px 8px}
+.tw-cant{font-size:13.5px;color:var(--ink-2);margin:4px 0 0 18px}
+</style>
+"""
+
+
+def plan(p: dict, limit: int = 6) -> str:
+    steps = p.get("steps", [])[:limit]
+    rows = "".join(
+        f'<div class="tw-st"><div class="tw-n">{s["step"]}</div><div><span class="tw-who">{esc(s["who"])}</span>'
+        f'<span class="tw-act">{esc(s["action"])}</span><div class="tw-why">{esc(s.get("why", ""))}</div>'
+        + (f'<div class="tw-eff"><b>If approved:</b> {esc(s["effect"])}</div>' if s.get("effect")
+           and s["who"] == "Curator" else
+           (f'<div class="tw-eff"><b>Fix:</b> {esc(s["effect"])}</div>' if s.get("effect") else ""))
+        + "</div></div>" for s in steps)
+    more = len(p.get("steps", [])) - len(steps)
+    together = (f'<div class="tw-why" style="margin-top:8px"><b>All repairs approved together:</b> '
+                f'{esc(p["all_repairs_together"])}</div>' if p.get("all_repairs_together") else "")
+    return (PLAN_CSS + f'<div class="tw-plan"><h4>What to do next</h4>{rows}'
+            + (f'<div class="tw-why">…and {more} more in the Review and Verdicts tabs.</div>' if more > 0 else "")
+            + together + "</div>")
+
+
+def cannot_tell(p: dict) -> str:
+    items = "".join(f"<li>{esc(c)}</li>" for c in p.get("cannot_tell", []))
+    return f'<div class="tw-plan"><h4>What Tripwire can\'t tell you</h4><ul class="tw-cant">{items}</ul></div>'

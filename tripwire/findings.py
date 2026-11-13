@@ -254,7 +254,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         card_q = next(q for q in questions if q["id"] == question)
         top_q = f"Given release {B}: {card_q['title']} (intended use: {card_q['intended_use']})"
         top_v = card_q["verdict"]
-    return {
+    doc = {
         "format_version": "0.2",
         "producer": {"team": CONFIG["producer_team"], "product": "Cohort Control Tower", "track": "cohort-firewall",
                      "tool": f"Tripwire {__version__}"},
@@ -271,6 +271,9 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         "settings": {k: v for k, v in CONFIG.items() if k != "producer_team"},
         "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
     }
+    from .next_steps import build_plan
+    doc["next_steps"] = build_plan(doc)  # what to do next, and what Tripwire can't tell you
+    return doc
 
 
 def _rate_severity(f: dict, analyses: dict, questions: dict) -> None:

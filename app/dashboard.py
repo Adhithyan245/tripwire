@@ -351,6 +351,13 @@ html(ui.tiles([("findings", str(len(doc.get("findings", [])))),
                ("repairs applied automatically", "0")]))
 html(ui.note("Research use only.", "Every swap or duplicate needs a curator's review. Repairs are proposals and are "
                                    "never applied automatically."))
+_plan = doc.get("next_steps")
+if _plan:
+    p1, p2 = st.columns([3, 2])
+    with p1:
+        html(ui.plan(_plan))
+    with p2:
+        html(ui.cannot_tell(_plan))
 
 tabs = st.tabs(["Verdicts", "Findings & evidence", f"Review ({len(status['open'])} open)", "What Tripwire can't see",
                 "Data & export"])

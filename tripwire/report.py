@@ -103,6 +103,18 @@ def render(doc: dict) -> str:
                "claim. Every swap or duplicate needs a curator's review; repairs are proposals and are never applied "
                "automatically.</div>")
 
+    plan = doc.get("next_steps") or {}
+    if plan.get("steps"):
+        rows = "".join(f"<li><b>{esc(s['who'])}:</b> {esc(s['action'])}"
+                       + (f"<div class='small muted'>{esc(s['why'])}</div>" if s.get("why") else "")
+                       + (f"<div class='small'><b>Effect:</b> {esc(s['effect'])}</div>" if s.get("effect") else "")
+                       + "</li>" for s in plan["steps"])
+        out.append(f"<h2>What to do next</h2><ol>{rows}</ol>")
+        if plan.get("all_repairs_together"):
+            out.append(f"<p class='small'><b>All repairs approved together:</b> {esc(plan['all_repairs_together'])}</p>")
+        out.append("<h2>What Tripwire can't tell you</h2><ul>"
+                   + "".join(f"<li>{esc(c)}</li>" for c in plan.get("cannot_tell", [])) + "</ul>")
+
     if questions:
         out.append("<h2>Research questions</h2><p class='small muted'>The same release can be fine for one question and "
                    "not for another. Each verdict cites the rule that produced it.</p>")

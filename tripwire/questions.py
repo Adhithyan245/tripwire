@@ -80,7 +80,20 @@ CARDS: list[QuestionCard] = [
                  "model_training", ER_COL, ("Positive", "Negative"), ["rna_hiseq.tsv.gz"],
                  required_checks=["sample_size", "patient_leakage", "site_confounding"],
                  acceptable_limitations="None for label or profile integrity."),
+    QuestionCard("predict_subtype_from_rna", "Train a research model to predict PAM50 subtype from RNA expression.",
+                 "model_training", PAM50_COL, ("Basal", "Her2", "LumA", "LumB", "Normal"), ["rna_hiseq.tsv.gz"],
+                 required_checks=["sample_size", "patient_leakage", "site_confounding"],
+                 acceptable_limitations="None for label or profile integrity."),
 ]
+
+# Labels that were computed from one of the data files. Predicting such a label from that same file is circular:
+# the model mostly re-learns the algorithm that made the label. (PAM50 subtype calls come from RNA expression; the
+# organizers confirmed PAM50Call_RNAseq "was originally worked out from RNA data".)
+LABEL_DERIVED_FROM = {PAM50_COL: {"rna_hiseq.tsv.gz"}}
+
+
+def circular_inputs(card: "QuestionCard") -> set[str]:
+    return set(card.feature_files) & LABEL_DERIVED_FROM.get(card.label, set())         if card.intended_use == "model_training" else set()
 BY_ID = {c.id: c for c in CARDS}
 
 # ---------- readiness checks ----------
@@ -177,6 +190,19 @@ def assess(card: QuestionCard, changes: list[Change], a: Release, b: Release, an
     out = {"id": card.id, "title": card.title, "intended_use": card.intended_use, "cohort": card.cohort,
            "inputs": card.files, "label": card.label, "acceptable_limitations": card.acceptable_limitations,
            "required_checks": card.required_checks}
+    circ = circular_inputs(card)
+    if circ:  # decidable from the question alone, whatever the release contains
+        c = CheckResult("label_circularity", "fail",
+                        f"the label {card.label} was computed from {', '.join(sorted(circ))}, the same data this model "
+                        "would use as input, so it would mostly re-learn the labelling algorithm", fix=None)
+        checks = [c] + [CheckResult(n, "skipped", "not needed: the question is circular") for n in card.required_checks]
+        out.update(problems=[], verdict="Blocked", relevant_changes=[],
+                   why=f"Circular question: {c.summary}. Choose inputs the label wasn't computed from (for example "
+                       "copy number or protein), or a label that wasn't derived from RNA.",
+                   release_part={"verdict": "Blocked", "why": "circular question"},
+                   checks=[_check_dict(x) for x in checks],
+                   coverage=coverage(checks, card.required_checks))
+        return out
     probs = problems(card, b) or problems(card, a)
     if probs:
         checks = [CheckResult(n, "unavailable", "inputs missing") for n in card.required_checks]
