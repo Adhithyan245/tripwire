@@ -15,6 +15,10 @@ from .validate import validate
 
 
 def main(argv=None):
+    try:  # never crash on a console that can't print a character (Windows code pages)
+        sys.stdout.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
     p = argparse.ArgumentParser(prog="tripwire", description="Diff two TCGA-BRCA releases. Research use only.")
     sub = p.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("diff", help="compare release B against release A and write findings.json")
@@ -35,6 +39,8 @@ def main(argv=None):
     d.add_argument("--question", help="question-card id: makes the top-level question and verdict that card's "
                                       "(see `python -m tripwire questions`)")
     sub.add_parser("questions", help="list the supported question cards")
+    doc_p = sub.add_parser("doctor", help="check the setup and print exactly what to do next")
+    doc_p.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
     e = sub.add_parser("envelope", help="Saturday in one command: open a sealed envelope, compare it with release A, "
                                         "write findings.json")
     e.add_argument("envelope", help="envelope number (e.g. 07) or 'practice'")
@@ -52,6 +58,9 @@ def main(argv=None):
         return 0
 
 
+    if args.cmd == "doctor":
+        from .doctor import run
+        return run(args.challenge_dir)
     if args.cmd == "questions":
         from .questions import CARDS
         for c in CARDS:

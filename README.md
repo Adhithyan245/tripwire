@@ -4,90 +4,132 @@
 
 OncoSys AI Healthcare Hackathon, Nov 2026 · Team **Skill issue** · Track 1, Cohort Firewall · Product: Cohort Control Tower
 
-**User:** a research engineer who owns a dataset that gets new releases.
-**Workflow:** point Tripwire at release A and release B. It finds swaps, duplicates and lost coverage, reruns only the analyses those changes touch, gives each one a verdict (Ready, Conditional, Blocked, Insufficient Evidence) and writes `findings.json` in the shared v0.2 format.
+You own a dataset that gets new releases. A new release can keep the same number of samples while some are swapped, copied or dropped, and a count check won't notice. Point Tripwire at the old release (A) and the new one (B). It:
 
-Research use only. Tripwire makes no diagnosis, treatment advice, risk score or clinical claim.
+1. finds every change, file by file (swaps, copies, appeared or lost samples, changed labels, value shifts);
+2. works out which analyses and research questions each change touches, and reruns only those;
+3. gives each one a verdict, **Ready**, **Conditional**, **Blocked** or **Insufficient Evidence**, with the rule and evidence behind it;
+4. proposes repairs for a person to approve or reject (it never applies them), and writes `findings.json` in the shared v0.2 format plus a readable HTML report.
 
-## Setup
+*Research use only. No diagnosis, treatment advice, risk score or clinical claim.*
 
-Needs Python 3.11+ and the [challenge repo](https://github.com/disleveK/oncosys-hackathon-challenge) cloned next to this one:
+## Quickstart (about 5 minutes)
+
+You need Python 3.11+ and git. The two repos sit side by side:
+
+```
+your-folder/
+├── oncosys-challenge/   ← the organizers' repo (data, validator, envelopes)
+└── tripwire/            ← this repo; run every command from here
+```
+
+**1. Get both repos**
 
 ```bash
-git clone https://github.com/disleveK/oncosys-hackathon-challenge ../oncosys-challenge
+git clone https://github.com/disleveK/oncosys-hackathon-challenge oncosys-challenge
+```
+```bash
+git clone https://github.com/Adhithyan245/tripwire tripwire
+```
+```bash
+cd tripwire
+```
+
+**2. Install**
+
+```bash
 pip install -r requirements.txt
+```
+
+**3. Download release A** (the frozen TCGA-BRCA release; about 4 MB, checked against the organizers' checksums)
+
+```bash
 python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna
 ```
 
-## Run
+**4. Check your setup.** This prints a ✓ for every check, or the exact command that fixes it:
 
 ```bash
-python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw <release-B-folder> --out out/findings.json
-python ../oncosys-challenge/format/validate.py out/findings.json
+python -m tripwire doctor
 ```
 
-### Saturday: the sealed envelope, in one command
-
-The judge gives an envelope number and a four-word code. One command opens it with the organizers' `unseal.py`, compares the release with release A, and writes `out/findings-<envelope>.json`, which is validated:
-
-```bash
-python -m tripwire envelope 07 amber falcon river quartz
-```
-
-Rehearse with the public practice envelope:
+**5. See it work.** This opens the organizers' public practice envelope, compares it with release A, and writes `out/findings-practice.json` and `out/findings-practice.html`. Open the `.html` file in a browser.
 
 ```bash
 python -m tripwire envelope practice orange meadow pilot lantern
 ```
 
-The command runs `unseal.py` unchanged, on any OS. On Windows it also sets `PYTHONUTF8=1`, because the script's ✓ marks crash a Windows console otherwise (still true after the organizers' Nov 12 update). The organizers have since fixed the CRLF line-ending mismatch in `unseal.py` and `make_release.py` (challenge repo `d0fbebd`). Our LF shim (`tripwire/unseal_lf.py`) is now redundant there, but it keeps older copies of the challenge repo working. An envelope that's already open is compared without unsealing again.
-
-### Human-readable report
-
-Every `diff` also writes `findings.html` next to `findings.json`: the verdicts, each analysis with before and after values, each finding with its evidence, severity reason and limitation, proposed repairs (none applied), research questions when present, tolerances, and file fingerprints. It's a single self-contained page (no scripts), so it opens anywhere and prints cleanly. Use `--no-report` to skip it, or `python -m tripwire report out/findings.json` to rebuild it.
-
-### Dashboard
+**6. Open the dashboard.** A short guided tour starts by itself; **Practice demo** in the sidebar runs step 5 in one click.
 
 ```bash
 streamlit run app/dashboard.py
 ```
 
-The page opens at http://localhost:8501. From the sidebar you can compare releases (including opening a sealed envelope and selecting a research question), upload a `findings.json` file, or load the clearly labelled synthetic example. Uploads receive basic structural checks; use the organizers' validator in Data and export for format validation. The synthetic example contains invented results and is not evidence of a real detection. The page shows:
+## What the verdicts mean
 
-- **Verdicts first:** the overall verdict, each research question with its rule and checks not run, and each analysis with before and after values and its sample-by-sample input changes.
-- **Findings and evidence:** every finding with its severity reason, limitation and evidence table, plus a "trace one sample" view.
-- **Review:** a reviewer records approve, reject or request more evidence, with a reason and their role, for every proposed repair. Decisions go into `findings.json` (`decisions`, with `original_preserved: true`). Nothing is ever applied.
-- **What Tripwire can't see:** the blind spots, plus this run's unbuilt checks.
-- **Data and export:** a validator check, a download of `findings.json` with the decisions, and the HTML report.
-
-## How the pieces plug together
-
-| Role | Plug-in point |
+| Verdict | Meaning |
 | --- | --- |
-| 1 · Detection | Implement `tripwire.detect.detect_changes(release_a, release_b) -> list[Change]` (currently a stub). `Change` is in `tripwire/contract.py`, documented in `docs/CONTRACT.md`. |
-| 2 · Impact, verdicts, format | `tripwire/analyses.py` (A1, A2 and what each reads), `impact.py`, `verdicts.py`, `findings.py` |
-| 3 · Mutation Lab | Feed your answer key straight in: `python -m tripwire diff A B --changes my_changes.json`, or call `tripwire.findings.build(changes, Release(a), Release(b))` |
-| 4 · Interface | Read `findings.json`: `verdict`, `analyses[].verdict`, `.why` (verdict reason), `.impact` (why touched or left alone), `.before`/`.after`, `findings[]`, `repairs[]`, `settings` (stated tolerances). For the Question Gate, use `tripwire.verdicts.CheckResult` + `question_verdict`. |
+| **Ready** | Nothing this result depends on changed. |
+| **Conditional** | Its inputs changed, but the result stayed within the stated tolerance. Usable, with care. |
+| **Blocked** | The result moved beyond tolerance, its conclusion flipped, or something changed that nothing explains. |
+| **Insufficient Evidence** | Too few samples, missing data, or a required check that didn't run. Never read as a pass. |
 
-Even without a detector, Tripwire reruns the analyses the impact map calls unaffected. If one moved anyway, it is **Blocked** and reported as an unexplained change. So a detector miss can't turn into a false "Ready".
+Tolerances and minimum sample counts are prototype policy choices, not clinical standards. They're printed in every report.
+
+## Using it
+
+| I want to… | Run |
+| --- | --- |
+| Compare any two release folders | `python -m tripwire diff <release-A> <release-B>` (writes `out/findings.json` and `.html`) |
+| Open a sealed envelope and compare it (judging day) | `python -m tripwire envelope <number> <four words>` |
+| Ask whether a release is fine for a specific research question | add `--question <id>`; list the questions with `python -m tripwire questions` |
+| Rebuild the HTML report from a findings file | `python -m tripwire report out/findings.json` |
+| Prove it catches changes | dashboard → View: **Mutation Lab**, or `python -m tripwire.mutation_lab --help` |
+| Check the shared format myself | `python ../oncosys-challenge/format/validate.py out/findings.json` |
+
+**Judging day.** The judge gives an envelope number and four words, for example `python -m tripwire envelope 07 amber falcon river quartz`. It opens the envelope with the organizers' own `unseal.py`, compares, validates and writes the report, usually in a few seconds. The envelope has no RNA file by design, and Tripwire doesn't flag that.
+
+**The dashboard** can compare two releases, open a sealed envelope, show a `findings.json` from another tool (upload it: it gets structural checks, and the organizers' validator runs in Data & export), or load a clearly labelled synthetic example. It has these tabs:
+- **Verdicts:** the overall verdict, each research question and each analysis, with before and after values.
+- **Findings & evidence:** every change with its samples, files, severity reason and limitation, plus "trace one sample".
+- **Review:** approve, reject or request more evidence on each proposed repair, with a reason. This is saved into `findings.json`; nothing is applied.
+- **What Tripwire can't see:** its blind spots.
+- **Data & export:** a validator check and downloads.
+- **Mutation Lab** (its own view in the sidebar): plant a known change, or run the full scorecard.
+
+## Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| Anything at all | `python -m tripwire doctor`: it names the problem and the command that fixes it |
+| "challenge repo not found" | Clone it next to this repo (step 1), or set `TRIPWIRE_CHALLENGE_DIR` to its path |
+| "release A not fetched" or a checksum mismatch | `python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna` |
+| `streamlit: command not found` | `python -m streamlit run app/dashboard.py` |
+| Windows: `UnicodeEncodeError` when unsealing directly | Use `python -m tripwire envelope …`, which handles it. Running `unseal.py` yourself needs `PYTHONUTF8=1` |
+| An envelope "doesn't open" | Check the number and the four words. Hyphens or spaces both work, and capitals don't matter |
+
+No API key is needed: nothing in Tripwire calls an AI service.
+
+## For developers
 
 ```bash
 python -m pytest -q
 ```
 
-### Question cards
+| Part | Where |
+| --- | --- |
+| Shared change contract | `tripwire/contract.py`, documented in `docs/CONTRACT.md` |
+| Detection (Role 1) | `tripwire/detect/`: every file in both releases; swaps, copies, membership, IDs, sample-type codes, clinical values, value shifts |
+| Impact, verdicts, questions, findings (Role 2) | `tripwire/analyses.py`, `impact.py`, `verdicts.py`, `questions.py`, `findings.py`, `report.py` |
+| Mutation Lab (Role 3) | `tripwire/mutation_lab/` (`core.py`, `extended.py`), documented in `docs/MUTATION_LAB.md` |
+| Dashboard and review (Role 4) | `app/dashboard.py`, `app/mutation_tab.py`, `tripwire/review.py` |
 
-```bash
-python -m tripwire questions                       # list the supported research questions
-python -m tripwire diff <A> <B> --question predict_er_from_protein
-```
+Two safety nets:
+- **Verification rerun:** Tripwire also reruns the analyses its impact map calls unaffected. If one moved anyway, it's **Blocked** and every changed sample is listed, so a detector miss can't become a false "Ready".
+- **Readiness checks:** a check that hasn't been built shows as unavailable and never counts as a pass.
 
-Every run assesses every supported card and writes them under `questions` in `findings.json`, each with its `verdict`, `why`, `release_part`, `checks`, `coverage` and `relevant_findings`. `--question` makes one card the top-level question and verdict. A card whose inputs aren't in the release says the data can't answer it. A required check that hasn't been built shows as `unavailable` and is never counted as a pass.
+## Team and data
 
-## Team
+Roles and the plan are in [PLAN.md](PLAN.md); how we work is in [CONTRIBUTING.md](CONTRIBUTING.md). All work goes to `dev`.
 
-See [PLAN.md](PLAN.md) for roles and [CONTRIBUTING.md](CONTRIBUTING.md) for how we work. `main` is locked; all work goes to `dev`.
-
-## Data and licenses
-
-TCGA-BRCA open-access data via the UCSC Xena TCGA hub, fetched by the challenge repo's `fetch.py` and checked against its pinned checksums. It is never committed here. Credit: TCGA Research Network; UCSC Xena; survival from the TCGA Pan-Cancer Clinical Data Resource (Liu et al., *Cell* 2018). See the challenge repo's `DATA_LICENSES.md`.
+Data: TCGA-BRCA open-access data from the UCSC Xena TCGA hub, fetched by the challenge repo's `fetch.py` and checked against its pinned checksums. It is never committed here. Credit: the TCGA Research Network; UCSC Xena; survival data from the TCGA Pan-Cancer Clinical Data Resource (Liu et al., *Cell* 2018). See the challenge repo's `DATA_LICENSES.md`.

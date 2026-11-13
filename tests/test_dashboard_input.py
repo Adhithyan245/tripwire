@@ -43,7 +43,7 @@ def test_accepts_generated_findings_with_review(releases):
 
 def test_dashboard_example_and_empty_findings():
     app = AppTest.from_file(str(EXAMPLE.parent / "dashboard.py")).run()
-    app.sidebar.radio[0].set_value("Synthetic example").run()
+    next(r for r in app.sidebar.radio if r.label == "Findings source").set_value("Synthetic example").run()
     next(button for button in app.sidebar.button if button.label == "Load synthetic example").click().run()
     assert not app.exception
     assert any("Synthetic demonstration" in warning.value for warning in app.warning)
@@ -53,3 +53,12 @@ def test_dashboard_example_and_empty_findings():
     app.run()
     assert not app.exception
     assert any("does not prove" in info.value for info in app.info)
+
+
+def test_dashboard_first_visit_tour_and_mutation_lab_view():
+    app = AppTest.from_file(str(EXAMPLE.parent / "dashboard.py"), default_timeout=60).run()
+    assert not app.exception
+    assert app.session_state["toured"] is True  # the tour opened once on first visit
+    next(r for r in app.sidebar.radio if r.label == "View").set_value("Mutation Lab").run()
+    assert not app.exception
+    assert any(s.value == "Mutation Lab" for s in app.subheader)
