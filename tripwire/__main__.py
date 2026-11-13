@@ -27,7 +27,16 @@ def main(argv=None):
     d.add_argument("--hash-b", choices=["file", "content"], default="content")
     d.add_argument("--no-verify-unaffected", action="store_true", help="don't rerun analyses the impact map says are unaffected")
     d.add_argument("--challenge-dir", help="path to the challenge repo (for the validator)")
+    e = sub.add_parser("envelope", help="Saturday in one command: open a sealed envelope, compare it with release A, "
+                                        "write findings.json")
+    e.add_argument("envelope", help="envelope number (e.g. 07) or 'practice'")
+    e.add_argument("words", nargs=4, help="the four-word code the judge gives you")
+    e.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
+    e.add_argument("--out", help="default: out/findings-<envelope>.json")
     args = p.parse_args(argv)
+
+    if args.cmd == "envelope":
+        return envelope(args)
 
     t0 = time.time()
     a, b = Release(args.release_a, args.name_a), Release(args.release_b, args.name_b)
@@ -56,6 +65,35 @@ def main(argv=None):
         print(f"  validator skipped: {e}")
     print(f"  wrote {out} in {time.time() - t0:.1f}s")
     return 1 if errs else 0
+
+
+def envelope(args) -> int:
+    """Unseal with the organizers' script, then run the normal diff on the opened release."""
+    import os
+    import subprocess
+
+    from .validate import challenge_dir
+    root = challenge_dir(args.challenge_dir)
+    if root is None:
+        print("Challenge repo not found: clone it next to this repo or pass --challenge-dir.")
+        return 2
+    name = "practice" if args.envelope.lower() == "practice" else f"E{int(args.envelope):02d}"
+    opened = root / "envelopes" / "opened" / name / "release"
+    t0 = time.time()
+    if not opened.is_dir():
+        env = dict(os.environ, PYTHONUTF8="1")  # unseal.py prints check marks; Windows consoles crash without this
+        # The organizers' script, unchanged, with pandas writing LF line endings (see tripwire/unseal_lf.py).
+        r = subprocess.run([sys.executable, "-m", "tripwire.unseal_lf", args.envelope, *args.words], cwd=root,
+                           env=dict(env, PYTHONPATH=str(pathlib.Path(__file__).resolve().parent.parent)))
+        if r.returncode != 0 and not opened.is_dir():
+            print("Unsealing failed; see the organizers' message above (check the number and the four words).")
+            return r.returncode or 1
+    else:
+        print(f"Envelope {name} is already open at {opened}; comparing it.")
+    print(f"Unsealed in {time.time() - t0:.1f}s")
+    release_a = root / "data" / "tcga-brca" / "raw"
+    out = args.out or f"out/findings-{name}.json"
+    return main(["diff", str(release_a), str(opened), "--out", out, "--challenge-dir", str(root)])
 
 
 if __name__ == "__main__":
