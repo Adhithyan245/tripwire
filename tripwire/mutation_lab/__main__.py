@@ -8,7 +8,7 @@ from pathlib import Path
 import warnings
 
 from tripwire.contract import load_changes
-from tripwire.mutation_lab.core import SCENARIOS, evaluate, generate
+from tripwire.mutation_lab.core import CONTROLS, DESCRIPTIONS, SCENARIOS, evaluate, generate
 from tripwire.release import Release
 
 
@@ -30,7 +30,14 @@ def main(argv=None):
     score.add_argument("source", type=Path)
     score.add_argument("target", type=Path)
     score.add_argument("--truth", type=Path, required=True)
+    commands.add_parser("scenarios", help="list the scenarios and what each plants")
     args = parser.parse_args(argv)
+
+    if args.command == "scenarios":
+        for name in SCENARIOS:
+            tag = " (no-change control)" if name in CONTROLS else ""
+            print(f"{name}{tag}: {DESCRIPTIONS[name]}")
+        return 0
 
     if args.command == "generate":
         if args.truth.is_symlink():
@@ -94,6 +101,10 @@ def main(argv=None):
         "Matching does not verify affected fields or biological identity; partners are reported separately.",
         "Precision and recall are undefined when their denominators are zero.",
     ]
+    if result["reported_as_other_type"]:
+        result["limitations"].append(
+            "Some planted changes were reported for the same sample and file under another change type "
+            "(see reported_as_other_type); they stay misses and false alarms in the strict counts.")
     if not checked:
         result["limitations"].append("Truth manifest has no release hashes, so it may not belong to these releases.")
     print(json.dumps(result, indent=2))
