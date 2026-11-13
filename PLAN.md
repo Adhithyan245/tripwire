@@ -257,19 +257,19 @@ Never cut: validator-passing `findings.json`, impact mapping, question cards and
 Tick these off before the Saturday 2:15 PM ET code freeze.
 
 - [ ] Team form submitted with Track 1 and Cohort Control Tower (Thu 1:30 PM ET)
-- [ ] Checkpoint 1 posted in Discord (Thu)
-- [ ] Checkpoint 2: paired team ran our repo from the README; we fixed what broke (Fri)
-- [ ] README names product, track, user, the one workflow, team members, exact setup and run steps
-- [ ] Clean clone: fresh folder, `fetch.py`, tool runs from the README alone
-- [ ] Judged results use the frozen TCGA-BRCA release; checksums match `sources.csv`
-- [ ] `findings.json` passes `python format/validate.py`
-- [ ] One result a judge can trace to samples, files and a calculation
-- [ ] One limitation visible in the product, not only the README
-- [ ] Human-review flags shown in the interface
-- [ ] No diagnosis, treatment advice, risk score or clinical claim
-- [ ] Gitleaks run; no keys, tokens or private links
-- [ ] AI runs with a local model or user-supplied key, shows sources, says when data can't answer
-- [ ] Third-party code and licenses listed; data credited
+- [x] Checkpoint 1 posted in Discord (Thu)
+- [ ] Checkpoint 2: paired team ran our repo from the README; we fixed what broke (Fri). *Their half done: Ready-Set-Blocked ran it from a fresh macOS clone and their notes are fixed in #29. Still owed: our run of their repo.*
+- [x] README names product, track, user, the one workflow, team members, exact setup and run steps
+- [x] Clean clone: fresh folder, `fetch.py`, tool runs from the README alone *(Thu by Role 3; Fri by Ready-Set-Blocked on macOS. Re-run on the final commit Sat.)*
+- [x] Judged results use the frozen TCGA-BRCA release; checksums match `sources.csv`
+- [x] `findings.json` passes `python format/validate.py`
+- [x] One result a judge can trace to samples, files and a calculation
+- [x] One limitation visible in the product, not only the README
+- [x] Human-review flags shown in the interface
+- [x] No diagnosis, treatment advice, risk score or clinical claim
+- [x] Gitleaks run; no keys, tokens or private links *(clean Thu; re-run on the final commit Sat)*
+- [x] ~~AI runs with a local model or user-supplied key, shows sources, says when data can't answer~~ Not applicable: the optional AI features were cut (cut order step 1); the README states Tripwire uses no AI
+- [x] Third-party code and licenses listed; data credited
 - [ ] Demo video link in the README
 - [ ] Pitch rehearsed twice
 
@@ -277,4 +277,4 @@ Tick these off before the Saturday 2:15 PM ET code freeze.
 
 - ~~What does the official Track 1 rubric weight?~~ Published; see the rubric table above. Plan updated Nov 12 per accepted proposal #2 (by Hemnaath).
 - ~~Who owns each role?~~ Assigned Nov 12 (see Roles). Presenter: Role 4 (Annamayya); technical Q&A: Role 2 (Adhithyan).
-- Which team are we paired with for Checkpoint 2, and will they build a Repair Review Desk for the finale handoff?
+- ~~Which team are we paired with for Checkpoint 2?~~ Ready-Set-Blocked. Still open: will they build a Repair Review Desk for the finale handoff?
