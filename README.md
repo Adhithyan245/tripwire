@@ -42,6 +42,10 @@ python -m tripwire envelope practice orange meadow pilot lantern
 
 The command runs `unseal.py` unchanged, on any OS. On Windows it fixes two problems with running it directly. The script's check marks crash the console, so it sets `PYTHONUTF8=1`. And pandas would write CRLF line endings, so the script's own fingerprint check would report a false mismatch; it has pandas write LF, as on macOS and Linux (`tripwire/unseal_lf.py`). An envelope that's already open is compared without unsealing again.
 
+### Human-readable report
+
+Every `diff` also writes `findings.html` next to `findings.json`: the verdicts, each analysis with before and after values, each finding with its evidence, severity reason and limitation, proposed repairs (none applied), research questions when present, tolerances, and file fingerprints. It's a single self-contained page (no scripts), so it opens anywhere and prints cleanly. Use `--no-report` to skip it, or `python -m tripwire report out/findings.json` to rebuild it.
+
 ## How the pieces plug together
 
 | Role | Plug-in point |
