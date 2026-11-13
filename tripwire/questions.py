@@ -36,6 +36,7 @@ class QuestionCard:
     analysis_id: str | None = None     # reference analysis that computes this question, if any
     required_checks: list[str] = field(default_factory=lambda: ["sample_size"])
     acceptable_limitations: str = ""
+    event: tuple[str, str] | None = None  # survival questions: (event column, time column) in survival.tsv
 
     @property
     def files(self) -> list[str]:
@@ -56,7 +57,7 @@ class QuestionCard:
     def eligible(self, r: Release) -> set[str]:
         ids = {norm_id(s) for s in r.clinical["sampleID"] if is_primary(s)}
         for name in self.feature_files:
-            ids &= {norm_id(s) for s in r.sample_ids(name)}
+            ids &= {norm_id(s) for s in (r.table(name).index if name in ROW_ORIENTED else r.sample_ids(name))}
         return ids
 
 
@@ -68,6 +69,12 @@ CARDS: list[QuestionCard] = [
     QuestionCard("subtype_mix", "What is the PAM50 subtype mix of primary tumors?",
                  "descriptive", PAM50_COL, ("Basal", "Her2", "LumA", "LumB", "Normal"), [], analysis_id="A2",
                  acceptable_limitations="Shares can shift slightly; a small move within tolerance is acceptable."),
+    QuestionCard("os_by_subtype", "Does overall survival differ between PAM50 subtypes?",
+                 "descriptive", PAM50_COL, ("Basal", "Her2", "LumA", "LumB"), ["survival.tsv"],
+                 {"survival.tsv": {"OS", "OS.time", "Redaction"}},
+                 required_checks=["sample_size", "event_count"], event=("OS", "OS.time"),
+                 acceptable_limitations="Normal-like tumors are left out (too few). Follow-up is short, so only "
+                                        "early survival differences can be judged."),
     QuestionCard("predict_er_from_protein", "Train a research model to predict ER status from protein (RPPA).",
                  "model_training", ER_COL, ("Positive", "Negative"), ["protein_rppa.tsv.gz"],
                  required_checks=["sample_size", "patient_leakage", "site_confounding"],
@@ -85,6 +92,8 @@ CARDS: list[QuestionCard] = [
                  required_checks=["sample_size", "patient_leakage", "site_confounding"],
                  acceptable_limitations="None for label or profile integrity."),
 ]
+
+ROW_ORIENTED = {"survival.tsv"}  # one row per sample (the molecular files have one column per sample)
 
 # Labels that were computed from one of the data files. Predicting such a label from that same file is circular:
 # the model mostly re-learns the algorithm that made the label. (PAM50 subtype calls come from RNA expression; the
@@ -140,7 +149,8 @@ def problems(card: QuestionCard, r: Release) -> list[dict]:
         out.append({"kind": "missing_field", "text": f"clinical.tsv has no column {card.label}"})
     for name, rows in card.fields.items():
         if name != "clinical.tsv" and rows:
-            missing = sorted(set(rows) - set(r.table(name).index))
+            have = r.table(name).columns if name in ROW_ORIENTED else r.table(name).index
+            missing = sorted(set(rows) - set(have))
             if missing:
                 out.append({"kind": "missing_field", "text": f"{name} has no row(s) {', '.join(missing)}"})
     if not out and not card.eligible(r):
@@ -164,7 +174,7 @@ def _inputs_equal(card: QuestionCard, a: Release, b: Release) -> bool:
         rows = card.fields[name]
 
         def sub(r):
-            t = r.table(name)
+            t = r.table(name).T if name in ROW_ORIENTED else r.table(name)
             t = t[[s for s in t.columns if norm_id(s) in ids]]
             if rows:
                 t = t.loc[sorted(rows & set(t.index))]
@@ -220,12 +230,15 @@ def assess(card: QuestionCard, changes: list[Change], a: Release, b: Release, an
         an = analyses[card.analysis_id]
         rel = {"verdict": an["verdict"], "why": f"Computed by {card.analysis_id}: {an['why']}"}
     elif touched and set(kinds) & INTEGRITY_CHANGES:
+        what = ("For model training that means wrong labels or copies across a train/test split"
+                if card.intended_use == "model_training" else
+                "Samples may now sit in the wrong group, or carry another sample's record, so the comparison is unreliable")
         rel = {"verdict": "Blocked", "why": f"{len(touched)} detected change(s) touch this question's inputs, including "
-               f"{', '.join(sorted(set(kinds) & INTEGRITY_CHANGES))}. For model training that means wrong labels or "
-               "copies across a train/test split; a curator must review them first."}
+               f"{', '.join(sorted(set(kinds) & INTEGRITY_CHANGES))}. {what}; a curator must review them first."}
     elif touched:
         rel = {"verdict": "Conditional", "why": f"{len(touched)} detected change(s) touch this question's inputs "
-               f"({', '.join(kinds)}); none corrupt labels or profiles, but the training set differs from release {a.name}."}
+               f"({', '.join(kinds)}); none corrupt labels or profiles, but the "
+               f"{'training set' if card.intended_use == 'model_training' else 'cohort'} differs from release {a.name}."}
     elif not _inputs_equal(card, a, b):
         rel = {"verdict": "Blocked", "why": "The data this question reads changed between releases, but no detected "
                "change explains it. Hold until a curator finds what changed."}

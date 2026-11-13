@@ -100,3 +100,32 @@ def site_confounding(card: QuestionCard, r: Release) -> CheckResult:
                            "the site", ev, fix="evaluate with whole sites held out, and report performance per site")
     return CheckResult("site_confounding", "fail", base + f"; {hi} or more, the label is largely predictable from the "
                        "site, which this data can't separate from biology", ev)
+
+
+@register_check("event_count")
+def event_count(card: QuestionCard, r: Release) -> CheckResult:
+    """Survival questions: enough events (deaths) per group to compare, how long follow-up is, and redacted rows."""
+    if not card.event or not r.has("survival.tsv"):
+        return CheckResult("event_count", "unavailable", "no survival data for this question")
+    ev_col, t_col = card.event
+    d = _labelled(card, r)
+    sv = r.table("survival.tsv")
+    sv = sv.assign(_k=[norm_id(i) for i in sv.index]).drop_duplicates("_k").set_index("_k")
+    d = d.assign(_k=d["sampleID"].map(norm_id)).join(sv[[ev_col, t_col] + (["Redaction"] if "Redaction" in sv else [])],
+                                                     on="_k")
+    d = d.dropna(subset=[ev_col, t_col])
+    need = CONFIG["min_events_per_group"]
+    per = d.groupby("label").agg(n=(ev_col, "size"), events=(ev_col, "sum"), months=(t_col, "median"))
+    per["months"] = (per["months"] / 30.44).round(1)
+    text = ", ".join(f"{k}: {int(v.events)} events of {int(v.n)}, median follow-up {v.months} mo" for k, v in per.iterrows())
+    redacted = int((d.get("Redaction", "").astype(str) == "Redacted").sum()) if "Redaction" in d else 0
+    ev = [{"kind": "row", "id": f"subtype {k}", "note": f"{int(v.events)} {ev_col} events, n={int(v.n)}"} for k, v in per.iterrows()]
+    if redacted:
+        ev.append({"kind": "file", "id": "survival.tsv",
+                   "note": f"{redacted} row(s) marked Redaction = Redacted but kept, as the organizers advise; check them"})
+    low = [k for k, v in per.iterrows() if v.events < need] + [k for k in card.label_values if k not in per.index]
+    tail = f"; {redacted} redacted row(s) flagged for a person" if redacted else ""
+    if low:
+        return CheckResult("event_count", "insufficient",
+                           f"fewer than {need} {ev_col} events for {', '.join(low)} ({text}){tail}", ev)
+    return CheckResult("event_count", "pass", f"at least {need} {ev_col} events per group ({text}){tail}", ev)

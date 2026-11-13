@@ -425,7 +425,11 @@ with tabs[1]:
                 st.markdown(f"**Questions:** {', '.join(f['relevant_questions'])}")
             if f.get("limitation"):
                 st.caption(f"Limitation: {f['limitation']}")
-            st.dataframe(pd.DataFrame(f.get("evidence", [])), hide_index=True, use_container_width=True)
+            evdf = pd.DataFrame(f.get("evidence", []))
+            cfg = {"url": st.column_config.LinkColumn("slide", display_text="View slide",
+                                                      help="The sample's tissue slide in NCI's public IDC viewer")} \
+                if "url" in evdf.columns else None
+            st.dataframe(evdf, hide_index=True, use_container_width=True, column_config=cfg)
 
     st.subheader("Trace one sample")
     samples = sorted({e["id"] for f in findings for e in f.get("evidence", []) if e.get("kind") == "sample"})
