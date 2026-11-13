@@ -34,6 +34,38 @@ try:  # HTML report (PR #11) may not be merged yet
 except ImportError:
     render_report = None
 
+PRACTICE_CODE = ["orange", "meadow", "pilot", "lantern"]  # public code, published in the challenge repo
+VERDICT_HELP = {
+    "Ready": "Nothing this result depends on changed.",
+    "Conditional": "Its inputs changed, but the result stayed within the stated tolerance. Usable, with care.",
+    "Blocked": "The result moved beyond tolerance, its conclusion flipped, or something changed that nothing explains.",
+    "Insufficient Evidence": "Too few samples, missing data, or a required check that didn't run. Never read as a pass.",
+}
+TOUR = [
+    ("Welcome to Tripwire",
+     "A new data release can keep the **same sample count** while samples are swapped, copied or dropped underneath. "
+     "Tripwire compares two releases, finds what changed, works out which results that breaks, and says what it "
+     "can't see.\n\nThis tour takes under a minute. *Research use only: no diagnosis or clinical claims.*"),
+    ("1 · Pick the releases",
+     "In the **sidebar**: release A is your trusted baseline. Release B is the new release: pick a folder, or open a "
+     "**sealed envelope** with its number and four-word code."),
+    ("2 · Choose a research question",
+     "The same release can be fine for one question and not for another. Pick a question in the sidebar, and every "
+     "verdict cites the rule that produced it."),
+    ("3 · Compare and read the verdicts",
+     "Press **Compare releases**. Verdicts come first:\n\n" +
+     "\n".join(f"- **{k}**: {v}" for k, v in VERDICT_HELP.items())),
+    ("4 · Check the evidence",
+     "**Findings & evidence** lists every change with the exact samples, files and fields, why its severity is what "
+     "it is, and its limitation. **Trace one sample** follows a sample from the file to the result it moved."),
+    ("5 · Review, don't auto-fix",
+     "In **Review**, a person approves, rejects or asks for more evidence on each proposed repair, with a reason. "
+     "Tripwire never applies a repair or changes source data. Decisions go into the exported findings.json."),
+    ("6 · Test it, and know its limits",
+     "The **Mutation Lab** (sidebar → View) plants a known change and scores whether Tripwire finds it. **What "
+     "Tripwire can't see** lists its blind spots. **Data & export** downloads findings.json and the HTML report.\n\n"
+     "Ready? Run the practice demo to see it all on real data."),
+]
 VERDICT_COLOR = {"Ready": "green", "Conditional": "orange", "Insufficient Evidence": "orange", "Blocked": "red"}
 SEV_ICON = {"high": "🔴", "medium": "🟠", "low": "⚪", "none": "⚪"}
 LIMITS = [
@@ -91,11 +123,59 @@ def verdict_badge(v: str) -> str:
     return f":{VERDICT_COLOR.get(v, 'gray')}-background[**{v}**]"
 
 
+def practice_demo(root: pathlib.Path | None, a_path: str) -> None:
+    """One click: open the public practice envelope if needed, compare it, show the result."""
+    if root is None or not a_path:
+        st.session_state["demo_error"] = "The challenge repo or release A wasn't found; run `python -m tripwire doctor`."
+        return
+    opened = root / "envelopes" / "opened" / "practice" / "release"
+    if not opened.is_dir():
+        ok, log = unseal(root, "practice", PRACTICE_CODE)
+        if not ok:
+            st.session_state["demo_error"] = "Couldn't open the practice envelope:\n" + log[-800:]
+            return
+    doc, secs = compare(a_path, str(opened), None, None)
+    st.session_state.update(doc=doc, secs=secs, decisions={}, demo_error=None)
+
+
+@st.dialog("Tour", width="large")
+def tour() -> None:
+    i = st.session_state.setdefault("tour_step", 0)
+    title, body = TOUR[i]
+    st.progress((i + 1) / len(TOUR), text=f"Step {i + 1} of {len(TOUR)}")
+    st.subheader(title)
+    st.markdown(body)
+    c1, c2, c3 = st.columns(3)
+    if c1.button("Back", disabled=i == 0, use_container_width=True):
+        st.session_state["tour_step"] = i - 1
+        st.rerun(scope="fragment")
+    if i < len(TOUR) - 1:
+        if c2.button("Next", type="primary", use_container_width=True):
+            st.session_state["tour_step"] = i + 1
+            st.rerun(scope="fragment")
+        if c3.button("Skip tour", use_container_width=True):
+            st.session_state.update(toured=True, tour_step=0)
+            st.rerun()
+    else:
+        if c2.button("Run the practice demo", type="primary", use_container_width=True):
+            st.session_state.update(toured=True, tour_step=0, run_demo=True)
+            st.rerun()
+        if c3.button("Close", use_container_width=True):
+            st.session_state.update(toured=True, tour_step=0)
+            st.rerun()
+
+
 # ------------------------------------------------------------------ sidebar: inputs
 
 root = challenge_dir()
 st.sidebar.title("🧭 Tripwire")
 st.sidebar.caption("Cohort Control Tower · team Skill issue")
+view = st.sidebar.radio("View", ["Release check", "Mutation Lab"], horizontal=True)
+t1, t2 = st.sidebar.columns(2)
+if t1.button("Take the tour", use_container_width=True):
+    st.session_state.update(tour_step=0, show_tour=True)
+demo_clicked = t2.button("Practice demo", use_container_width=True,
+                         help="Open the public practice envelope and compare it with release A, in one click.")
 if root is None:
     st.sidebar.error("Challenge repo not found. Clone it next to this repo, or set TRIPWIRE_CHALLENGE_DIR.")
 default_a = str(root / "data" / "tcga-brca" / "raw") if root else ""
@@ -139,6 +219,19 @@ if run:
     except Exception as e:  # show the problem instead of a stack trace
         st.error(f"Couldn't compare these releases: {e}")
 
+if demo_clicked or st.session_state.pop("run_demo", False):
+    with st.spinner("Opening the practice envelope and comparing it with release A…"):
+        try:
+            practice_demo(root, a_path)
+        except Exception as e:
+            st.session_state["demo_error"] = str(e)
+    view = "Release check"
+
+# first visit: the tour opens by itself once
+if st.session_state.pop("show_tour", False) or not st.session_state.get("toured"):
+    st.session_state["toured"] = True
+    tour()
+
 doc = st.session_state.get("doc")
 
 # ------------------------------------------------------------------ main: nothing yet
@@ -146,8 +239,38 @@ doc = st.session_state.get("doc")
 st.title("Tripwire")
 st.markdown("**Same sample count, different data.** Tripwire tells you what changed, what it breaks, and what it "
             "can't see.")
+if st.session_state.get("demo_error"):
+    st.error(st.session_state["demo_error"])
+
+if view == "Mutation Lab":
+    try:
+        from mutation_tab import render as render_lab
+    except ImportError:
+        sys.path.insert(0, str(ROOT / "app"))
+        from mutation_tab import render as render_lab
+    render_lab(st, a_path)
+    st.stop()
+
 if doc is None:
-    st.info("Pick release B (or open an envelope) in the sidebar, then **Compare releases**.")
+    st.subheader("Start here")
+    c1, c2, c3 = st.columns(3)
+    with c1.container(border=True):
+        st.markdown("**See it work in one click**")
+        st.caption("Opens the public practice envelope and compares it with release A.")
+        if st.button("Run the practice demo", type="primary", use_container_width=True, key="demo_main"):
+            st.session_state["run_demo"] = True
+            st.rerun()
+    with c2.container(border=True):
+        st.markdown("**Check your own release**")
+        st.caption("Pick release B in the sidebar, or open a sealed envelope with its number and four words, then "
+                   "press Compare releases.")
+    with c3.container(border=True):
+        st.markdown("**Prove it catches changes**")
+        st.caption("Switch the sidebar View to Mutation Lab: plant a known change and watch Tripwire find it.")
+    st.markdown("##### What the verdicts mean")
+    for k, v in VERDICT_HELP.items():
+        st.markdown(f"{verdict_badge(k)} {v}")
+    st.caption("New here? Press **Take the tour** in the sidebar.")
     st.stop()
 
 # ------------------------------------------------------------------ verdict first
@@ -157,6 +280,7 @@ status = review_status(apply_decisions(doc, decisions) if decisions else doc)
 c1, c2 = st.columns([3, 2])
 with c1:
     st.markdown(f"### {verdict_badge(doc.get('verdict', ''))}")
+    st.caption(VERDICT_HELP.get(doc.get("verdict", ""), ""))
     st.markdown(f"**{doc.get('question', '')}**")
     rel = doc["data"]["releases"]
     st.caption(f"{rel[0]['name']} → {rel[-1]['name']} · compared in {st.session_state.get('secs', 0):.1f} s")

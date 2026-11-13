@@ -23,7 +23,8 @@ from ..release import Release, content_sha256
 
 ROW_FILES = {"clinical.tsv": "sampleID", "survival.tsv": "sample"}
 NEAR_DUP_R = 0.999          # Pearson r above which two continuous profiles count as near-identical
-CONTINUOUS_MIN_UNIQUE = 50  # a file is "continuous" if a typical sample has at least this many distinct values
+CONTINUOUS_MIN_SHARE = 0.5     # "continuous" if most of a typical sample's values are distinct (protein, RNA),
+CONTINUOUS_MIN_FEATURES = 10   # unlike copy-number levels or 0/1 mutations; needs enough features to judge
 MAX_FIELDS = 200            # cap on fields listed for one change
 
 
@@ -109,8 +110,11 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
     by_hash_b: dict[str, list[str]] = {}
     for s, h in hb.items():
         by_hash_b.setdefault(h, []).append(s)
-    continuous = np.median([np.unique(av[:, i][~np.isnan(av[:, i])]).size for i in range(min(av.shape[1], 50))] or [0]) \
-        >= CONTINUOUS_MIN_UNIQUE
+    def _share(col):
+        v = col[~np.isnan(col)]
+        return np.unique(v).size / v.size if v.size else 0.0
+    continuous = av.shape[0] >= CONTINUOUS_MIN_FEATURES and \
+        np.median([_share(av[:, i]) for i in range(min(av.shape[1], 50))] or [0]) >= CONTINUOUS_MIN_SHARE
 
     def a_identity(h: str, exclude: str) -> str | None:
         """The single release-A sample that owned this profile, if the profile identifies anyone."""
@@ -122,7 +126,10 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
     def near_a(col: np.ndarray, exclude: set[str]) -> tuple[str, float] | None:
         if not continuous or not _informative(col):
             return None
-        best = _nearest(col, av, list(ai), exclude)
+        if len(by_hash_a.get(_hash(col), [])) > 1:
+            return None  # exactly a profile several A samples share: it identifies nobody
+        shared = {s for s, h in ha.items() if len(by_hash_a[h]) > 1}
+        best = _nearest(col, av, list(ai), exclude | shared)
         return best if best and best[1] >= NEAR_DUP_R else None
 
     raw = lambda s, side: (mb if side == "B" else ma).get(s, s)
