@@ -52,7 +52,7 @@ Every `diff` also writes `findings.html` next to `findings.json`: the verdicts, 
 streamlit run app/dashboard.py
 ```
 
-The page opens at http://localhost:8501. From the sidebar you pick release B, or open a sealed envelope with its number and four words, choose a research question, and compare. The page shows:
+The page opens at http://localhost:8501. From the sidebar you can compare releases (including opening a sealed envelope and selecting a research question), upload a `findings.json` file, or load the clearly labelled synthetic example. Uploads receive basic structural checks; use the organizers' validator in Data and export for format validation. The synthetic example contains invented results and is not evidence of a real detection. The page shows:
 
 - **Verdicts first:** the overall verdict, each research question with its rule and checks not run, and each analysis with before and after values and its sample-by-sample input changes.
 - **Findings and evidence:** every finding with its severity reason, limitation and evidence table, plus a "trace one sample" view.

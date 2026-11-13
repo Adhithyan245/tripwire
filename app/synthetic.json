@@ -1,0 +1,121 @@
+{
+  "format_version": "0.2",
+  "question": "Did the synthetic release change the protected analyses?",
+  "verdict": "Conditional",
+  "analyses": [
+    {
+      "id": "A1",
+      "title": "ER-alpha protein by clinical ER status",
+      "verdict": "Conditional",
+      "why": "The result moved within the stated tolerance.",
+      "impact": "A protein profile swap touches this analysis.",
+      "inputs": [
+        "clinical.tsv",
+        "protein_rppa.tsv.gz"
+      ],
+      "before": {
+        "n_samples": 80,
+        "difference": 3.0
+      },
+      "after": {
+        "n_samples": 80,
+        "difference": 2.9
+      },
+      "status": "changed"
+    },
+    {
+      "id": "A2",
+      "title": "RNA subtype mix of primary tumors",
+      "verdict": "Ready",
+      "why": "The result did not change.",
+      "impact": "This analysis does not read the changed protein file.",
+      "before": {
+        "n_samples": 100,
+        "counts": {
+          "LumA": 60,
+          "Basal": 40
+        }
+      },
+      "after": {
+        "n_samples": 100,
+        "counts": {
+          "LumA": 60,
+          "Basal": 40
+        }
+      },
+      "status": "unchanged"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "kind": "sample_swap",
+      "summary": "Two invented sample profiles appear exchanged in the synthetic protein file.",
+      "severity": "high",
+      "needs_human_review": true,
+      "evidence": [
+        {
+          "kind": "sample",
+          "id": "SYNTHETIC-001",
+          "file": "protein_rppa.tsv.gz",
+          "release": "B"
+        },
+        {
+          "kind": "sample",
+          "id": "SYNTHETIC-002",
+          "file": "protein_rppa.tsv.gz",
+          "release": "B"
+        },
+        {
+          "kind": "protein",
+          "id": "ERALPHA"
+        }
+      ],
+      "affects_analyses": [
+        "A1"
+      ],
+      "not_affected_analyses": [
+        "A2"
+      ],
+      "limitation": "A profile swap does not explain why the change occurred."
+    }
+  ],
+  "repairs": [
+    {
+      "id": "R1",
+      "action": "flag_for_review",
+      "targets": [
+        {
+          "kind": "sample",
+          "id": "SYNTHETIC-001"
+        }
+      ],
+      "justification": "Ask a curator to review the profiles. Proposed only.",
+      "addresses": [
+        "F1"
+      ]
+    }
+  ],
+  "settings": {
+    "A1_difference_rel_tolerance": 0.05,
+    "A2_percent_pp_tolerance": 1.0,
+    "min_samples_per_group": 20
+  },
+  "data": {
+    "dataset": "Synthetic example",
+    "releases": [
+      {
+        "name": "Synthetic A",
+        "files": []
+      },
+      {
+        "name": "Synthetic B",
+        "files": []
+      }
+    ]
+  },
+  "producer": {
+    "team": "Synthetic example",
+    "product": "Cohort Control Tower"
+  }
+}
