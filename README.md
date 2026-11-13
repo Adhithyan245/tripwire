@@ -46,6 +46,20 @@ The command runs `unseal.py` unchanged, on any OS. On Windows it fixes two probl
 
 Every `diff` also writes `findings.html` next to `findings.json`: the verdicts, each analysis with before and after values, each finding with its evidence, severity reason and limitation, proposed repairs (none applied), research questions when present, tolerances, and file fingerprints. It's a single self-contained page (no scripts), so it opens anywhere and prints cleanly. Use `--no-report` to skip it, or `python -m tripwire report out/findings.json` to rebuild it.
 
+### Dashboard
+
+```bash
+streamlit run app/dashboard.py
+```
+
+The page opens at http://localhost:8501. From the sidebar you pick release B, or open a sealed envelope with its number and four words, choose a research question, and compare. The page shows:
+
+- **Verdicts first:** the overall verdict, each research question with its rule and checks not run, and each analysis with before and after values and its sample-by-sample input changes.
+- **Findings and evidence:** every finding with its severity reason, limitation and evidence table, plus a "trace one sample" view.
+- **Review:** a reviewer records approve, reject or request more evidence, with a reason and their role, for every proposed repair. Decisions go into `findings.json` (`decisions`, with `original_preserved: true`). Nothing is ever applied.
+- **What Tripwire can't see:** the blind spots, plus this run's unbuilt checks.
+- **Data and export:** a validator check, a download of `findings.json` with the decisions, and the HTML report.
+
 ## How the pieces plug together
 
 | Role | Plug-in point |
