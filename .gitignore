@@ -15,3 +15,6 @@ CHANGES.json
 out/
 findings*.json
 !tests/fixtures/**
+
+# local editor and agent settings
+.claude/

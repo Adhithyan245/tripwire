@@ -21,15 +21,19 @@ class AnalysisVerdict:
     reason: str
 
 
-def release_verdict(affected: bool, movement: Movement | None) -> AnalysisVerdict:
-    """movement is None when the analysis wasn't rerun."""
+def release_verdict(affected: bool, movement: Movement | None, inputs=None) -> AnalysisVerdict:
+    """movement is None when the analysis wasn't rerun. inputs: a SliceDiff of exactly what it reads, if computed."""
     if movement is None:
         return AnalysisVerdict("Ready", "Nothing this analysis uses changed; not rerun.")
     if not affected:
         if movement.moved:
             return AnalysisVerdict("Blocked", "The result moved although no detected change touches this "
                                    f"analysis: something changed that the detector didn't report ({movement.magnitude}).")
-        return AnalysisVerdict("Ready", f"Nothing this analysis uses changed; a check rerun confirms it ({movement.magnitude}).")
+        if inputs is not None and inputs.any:
+            return AnalysisVerdict("Conditional", "Data this analysis reads changed with no detected change to explain it, "
+                                   f"though the result didn't move ({movement.magnitude}).")
+        same = f"the {inputs.identical} samples it reads are identical in both releases; " if inputs is not None else ""
+        return AnalysisVerdict("Ready", f"Nothing this analysis uses changed: {same}a check rerun confirms it ({movement.magnitude}).")
     if movement.insufficient:
         return AnalysisVerdict("Insufficient Evidence", f"Too few samples left in a group after the change ({movement.magnitude}).")
     if movement.flipped:
