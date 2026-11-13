@@ -21,6 +21,18 @@ python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna
 
 ## Run
 
+### View verdicts in the interface
+
+From the Tripwire repository, after installing the requirements above, run:
+
+```bash
+python -m streamlit run app.py
+```
+
+Open the local URL printed by Streamlit. The default example is entirely synthetic and demonstrates the interface; it is not a detection result. Choose **Upload findings.json** to inspect output from the `diff` command below. The interface displays the supplied results and does not run detection or validate the findings format. Repairs are proposals for human review only.
+
+### Generate findings
+
 ```bash
 python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw <release-B-folder> --out out/findings.json
 python ../oncosys-challenge/format/validate.py out/findings.json
