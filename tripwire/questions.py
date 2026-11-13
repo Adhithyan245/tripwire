@@ -16,7 +16,7 @@ from .analyses import ER_COL, PAM50_COL, is_primary
 from .config import CONFIG, worst
 from .contract import Change, norm_id
 from .impact import touches
-from .release import Release
+from .release import Release, content_sha256
 from .verdicts import CheckResult, coverage, question_verdict
 
 # Changes that corrupt which label or which profile belongs to a sample. For model training they block: the model
@@ -56,7 +56,7 @@ class QuestionCard:
     def eligible(self, r: Release) -> set[str]:
         ids = {norm_id(s) for s in r.clinical["sampleID"] if is_primary(s)}
         for name in self.feature_files:
-            ids &= {norm_id(s) for s in r.table(name).columns}
+            ids &= {norm_id(s) for s in r.sample_ids(name)}
         return ids
 
 
@@ -137,6 +137,8 @@ def problems(card: QuestionCard, r: Release) -> list[dict]:
 
 def _inputs_equal(card: QuestionCard, a: Release, b: Release) -> bool:
     """Do the data this card reads match between releases, ignoring row and column order?"""
+    if all(content_sha256(a.path / f) == content_sha256(b.path / f) for f in card.files):
+        return True  # identical files (line endings aside): nothing to compare
     ids = card.eligible(a) | card.eligible(b)
 
     def lab(r):

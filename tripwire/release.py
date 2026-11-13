@@ -56,6 +56,16 @@ class Release:
     def protein(self) -> pd.DataFrame:
         return pd.read_csv(self.path / "protein_rppa.tsv.gz", sep="\t", index_col=0)
 
+    def sample_ids(self, name: str) -> list[str]:
+        """Sample IDs of a molecular file from its header line only (fast for large files). Cached."""
+        cache = self.__dict__.setdefault("_ids", {})
+        if name not in cache:
+            if name == "protein_rppa.tsv.gz" or name in self.__dict__.get("_tables", {}):
+                cache[name] = list(self.table(name).columns)
+            else:
+                cache[name] = list(pd.read_csv(self.path / name, sep="	", index_col=0, nrows=0).columns)
+        return cache[name]
+
     def table(self, name: str) -> pd.DataFrame:
         """Any molecular file: features as rows, samples as columns. Cached."""
         if name == "clinical.tsv":
