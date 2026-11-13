@@ -152,3 +152,40 @@ def test_vanished_file_is_a_finding_except_rna(releases, tmp_path):
     shutil.copy(a / "protein_rppa.tsv.gz", a / "rna_hiseq.tsv.gz")
     write(b, clinical, protein)
     assert detect_changes(Release(a), Release(b)) == []
+
+
+def test_repeated_column_id_is_a_duplicate_not_a_new_sample(releases):
+    """pandas renames a repeated column to 'ID.1'; that must not become a fake new sample."""
+    a, b, clinical, protein = releases
+    s = protein.columns[2]
+    p = protein.copy()
+    raw = p.to_csv(sep="\t").splitlines()
+    # write the file by hand with the same column header twice
+    header = raw[0].split("\t") + [s]
+    rows = [r + "\t" + r.split("\t")[1 + list(p.columns).index(s)] for r in raw[1:]]
+    import gzip
+    write(b, clinical, p)
+    with gzip.open(b / "protein_rppa.tsv.gz", "wt", newline="") as f:
+        f.write("\t".join(header) + "\n" + "\n".join(rows) + "\n")
+    ch = detect_changes(Release(a), Release(b))
+    assert [(c.change_type, c.sample_id) for c in ch] == [("duplicate", s)]
+    assert "appears 2 times" in ch[0].evidence
+
+
+def test_repeated_clinical_row_is_reported(releases):
+    a, b, clinical, protein = releases
+    c2 = pd.concat([clinical, clinical.iloc[[5]]], ignore_index=True)
+    write(b, c2, protein)
+    ch = detect_changes(Release(a), Release(b))
+    assert [(c.change_type, c.file, c.sample_id) for c in ch] == [("duplicate", "clinical.tsv", clinical.sampleID[5])]
+
+
+def test_chain_of_swaps_is_reported_as_swaps(releases):
+    """A gets C's profile, B gets A's, C gets B's: no pair exchanges directly, but all three are swaps."""
+    a, b, clinical, protein = releases
+    x, y, z = [c for c in protein.columns if c[13:15] == "01"][:3]
+    rotated = protein.rename(columns={x: y, y: z, z: x})[protein.columns]
+    write(b, clinical, rotated)
+    ch = detect_changes(Release(a), Release(b))
+    assert {(c.change_type, c.sample_id) for c in ch} == {("swap", x), ("swap", y), ("swap", z)}
+    assert all(c.related_sample_id in {x, y, z} - {c.sample_id} for c in ch)

@@ -13,7 +13,9 @@ envelopes leave out by design.
 """
 from __future__ import annotations
 
+import gzip
 import hashlib
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -39,11 +41,32 @@ def detect_changes(release_a: Release, release_b: Release) -> list[Change]:
     for name in sorted(set(release_a.files) & set(release_b.files)):
         if content_sha256(release_a.path / name) == content_sha256(release_b.path / name):
             continue  # identical content (line endings aside): nothing can have changed
+        out += _repeated_ids(name, _all_ids(release_a, name), _all_ids(release_b, name))
         if name in ROW_FILES:
             out += _diff_rows(name, _read_rows(release_a, name), _read_rows(release_b, name), ROW_FILES[name])
         else:
             out += _diff_matrix(name, _read_matrix(release_a, name), _read_matrix(release_b, name))
     return out
+
+
+def _all_ids(r: Release, name: str) -> list[str]:
+    """Every sample ID exactly as written, repeats included (pandas renames a repeated column to 'ID.1')."""
+    if name in ROW_FILES:
+        return _read_rows(r, name)[ROW_FILES[name]].tolist()
+    opener = gzip.open if name.endswith(".gz") else open
+    with opener(r.path / name, "rt", encoding="utf-8", newline="") as f:
+        return f.readline().rstrip("\r\n").split("\t")[1:]
+
+
+def _repeated_ids(name: str, ids_a: list[str], ids_b: list[str]) -> list[Change]:
+    """A sample ID listed more often than before: its data is counted twice (join inflation)."""
+    ca, cb = Counter(map(norm_id, ids_a)), Counter(map(norm_id, ids_b))
+    first = {}
+    for s in ids_b:
+        first.setdefault(norm_id(s), s)
+    return [Change(first[k], "duplicate", name, [], f"sample ID appears {n} times in the new release's {name} "
+                   f"(was {ca.get(k, 0)}), so its data would be counted {n} times", ca.get(k, 0), n)
+            for k, n in sorted(cb.items()) if n > 1 and n > ca.get(k, 0)]
 
 
 def _vanished_file(r: Release, name: str) -> list[Change]:
@@ -84,9 +107,10 @@ def _informative(col: np.ndarray) -> bool:
 # ---------------------------------------------------------------- molecular files
 
 def _read_matrix(r: Release, name: str) -> pd.DataFrame:
-    if name == "protein_rppa.tsv.gz":
-        return r.protein
-    return pd.read_csv(r.path / name, sep="	", index_col=0)
+    df = r.protein if name == "protein_rppa.tsv.gz" else pd.read_csv(r.path / name, sep="\t", index_col=0)
+    # A repeated column ID comes back as 'ID.1', 'ID.2'; keep the first copy. _repeated_ids reports the repeat.
+    real = set(_all_ids(r, name))
+    return df[[c for c in df.columns if c in real]] if len(real) < df.shape[1] else df
 
 
 def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
@@ -171,8 +195,16 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
                               "own profile is gone", "own profile", f"copy of {raw(src, 'B')}",
                               related_sample_id=raw(src, "B")))
             done.add(s)
+        elif src and src in common and hb.get(src) != ha.get(src):
+            # Part of a chain of swaps (A gets B's profile, B gets C's, C gets A's): no pair exchanges directly,
+            # but each sample now carries another's previous profile, and that sample's own profile moved too.
+            out.append(Change(raw(s, "B"), "swap", name, [], f"profile is {how} to {raw(src, 'A')}'s in the previous "
+                              f"release, and {raw(src, 'B')}'s own profile changed too (part of a chain of swaps)",
+                              "own profile", f"profile of {raw(src, 'A')}", related_sample_id=raw(src, "B")))
+            done.add(s)
         else:
-            out.append(_value_change(name, raw(s, "B"), feats, av[:, ai[s]], col_b, src, how))
+            out.append(_value_change(name, raw(s, "B"), feats, av[:, ai[s]], col_b,
+                                     src if src and src not in bi else None, how))
             done.add(s)
 
     gone = set(disappeared)
@@ -214,7 +246,8 @@ def _value_change(name, sample, feats, col_a, col_b, src, how) -> Change:
     if na_b > na_a:
         bits.append(f"missing values rose from {na_a} to {na_b}")
     if src:
-        bits.append(f"now {how} to {src}'s previous profile, but that profile isn't unique enough to call a copy")
+        bits.append(f"now {how} to the profile {src} had before, and {src} is no longer in this file: the sample may "
+                    "have been relabelled")
     ok = ~np.isnan(col_a) & ~np.isnan(col_b) & diff
     if ok.sum() >= 3 and np.all(col_a[ok] != 0):
         ratio = np.median(col_b[ok] / col_a[ok])
