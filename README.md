@@ -2,7 +2,7 @@
 
 **Same sample count, different data. Tripwire tells you what changed, what it breaks, and what it can't see.**
 
-OncoSys AI Healthcare Hackathon, Nov 2026 · Track 1, Cohort Firewall · Product: Cohort Control Tower
+OncoSys AI Healthcare Hackathon, Nov 2026 · Team **Skill issue** · Track 1, Cohort Firewall · Product: Cohort Control Tower
 
 **User:** a research engineer who owns a dataset that gets new releases.
 **Workflow:** point Tripwire at release A and release B. It finds swaps, duplicates and lost coverage, reruns only the analyses those changes touch, gives each one a verdict (Ready, Conditional, Blocked, Insufficient Evidence) and writes `findings.json` in the shared v0.2 format.
