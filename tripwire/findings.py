@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 
 from . import __version__
-from .analyses import ANALYSES, ER_COL, PAM50_COL, public, slice_diff
+from .analyses import ANALYSES, ER_COL, PAM50_COL, missing_inputs, public, slice_diff
 from .config import CONFIG, worst
 from .contract import Change, norm_id
 from .impact import map_impact
@@ -74,14 +74,18 @@ def _summary(kind: str, chs: list[Change], file: str, sub: str, count_note: str)
     ids = sorted({c.sample_id for c in chs})
     s = {
         "swap": lambda: f"Profiles of {chs[0].sample_id} and {chs[0].related_sample_id or '?'} in {file} appear exchanged between releases.",
-        "duplicate": lambda: f"{n} sample(s) in {file} carry profiles identical or near-identical to other samples.",
+        "duplicate": lambda: (f"{n} sample ID(s) listed more than once in {file}, so their data would be counted twice."
+                              if all("sample ID appears" in c.evidence for c in chs) else
+                              f"{n} sample(s) in {file} carry profiles identical or near-identical to other samples."),
         "appeared": lambda: f"{n} sample(s) appear in {file} that were not in the previous release.",
         "disappeared": lambda: f"{n} sample(s) lost their data in {file}.",
         "label_change": lambda: f"{n} sample(s) changed value in {file} ({', '.join(sorted({f for c in chs for f in c.fields}))[:120]}).",
         "sample_type_change": lambda: f"{n} sample(s) changed sample-type code in {file}.",
         "id_format_change": lambda: f"{n} sample ID(s) in {file} changed case or whitespace.",
         "value_shift": lambda: f"{n} sample(s) in {file} changed values without a swap or copy.",
-        "coverage_loss": lambda: f"Missing data rose for a subgroup in {file} ({n} sample(s)).",
+        "coverage_loss": lambda: (f"{chs[0].evidence[0].upper() + chs[0].evidence[1:]}: all {n} sample(s) lost it."
+                                  if " removed from the new release's " in chs[0].evidence else
+                                  f"Missing data rose in {file} for {n} sample(s)."),
     }[kind]()
     if sub and kind == "duplicate" and sub.startswith("copied"):
         s += f" By release-A labels: {sub}."
@@ -122,6 +126,13 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         if not all(release_a.has(f) and release_b.has(f) for f in a.files):
             analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
                                  "why": f"Missing input file(s): {a.files}", "title": a.title})
+            verdicts[a.id] = "Insufficient Evidence"
+            continue
+        gaps = [f"release {r.name} has no {g}" for r in (release_a, release_b) for g in missing_inputs(a, r)]
+        if gaps:  # a field this analysis needs was dropped: say so instead of crashing
+            analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
+                                 "why": f"Can't rerun {a.id}: " + "; ".join(gaps) + ".", "title": a.title,
+                                 "impact": impacts[a.id].why(len(changes)), "inputs": a.files, "cohort": a.cohort})
             verdicts[a.id] = "Insufficient Evidence"
             continue
         before = after = mv = sd = None

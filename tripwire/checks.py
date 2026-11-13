@@ -20,7 +20,7 @@ from .verdicts import CheckResult
 def _labelled(card: QuestionCard, r: Release) -> pd.DataFrame:
     """sampleID, patient, site, label for the card's eligible samples that carry one of its label values."""
     elig = card.eligible(r)
-    c = r.clinical
+    c = r.clinical.drop_duplicates(subset=["sampleID"])
     d = c[c["sampleID"].map(norm_id).isin(elig) & c[card.label].isin(card.label_values)]
     return pd.DataFrame({"sampleID": d["sampleID"].values, "patient": d["sampleID"].str[:12].str.upper().values,
                          "site": d["sampleID"].str[5:7].str.upper().values, "label": d[card.label].values})

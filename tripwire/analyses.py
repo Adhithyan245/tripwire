@@ -16,6 +16,24 @@ ER_COL = "breast_carcinoma_estrogen_receptor_status"
 PAM50_COL = "PAM50Call_RNAseq"
 
 
+def _clinical(r: Release):
+    """Clinical rows with each sample once. A repeated row is reported by the detector as a duplicate; the analyses
+    use its first copy so they can still run."""
+    c = r.clinical
+    return c.drop_duplicates(subset=["sampleID"]) if c["sampleID"].duplicated().any() else c
+
+
+def missing_inputs(a: "Analysis", r: Release) -> list[str]:
+    """Fields an analysis needs that this release doesn't have, e.g. 'protein_rppa.tsv.gz: ERALPHA'."""
+    out = []
+    for name, need in a.fields.items():
+        if not need or not r.has(name):
+            continue
+        have = set(r.clinical.columns) if name == "clinical.tsv" else set(r.table(name).index)
+        out += [f"{name}: {f}" for f in sorted(set(need) - have)]
+    return out
+
+
 def is_primary(sample_id) -> bool:
     return str(sample_id)[13:15] == "01"
 
@@ -71,7 +89,7 @@ class Analysis:
 # ---------- A1: ER-alpha protein by clinical ER status ----------
 
 def a1_run(r: Release) -> dict:
-    er = r.clinical.set_index("sampleID")[ER_COL]
+    er = _clinical(r).set_index("sampleID")[ER_COL]
     samples = [s for s in r.protein.columns if is_primary(s) and er.get(s) in ("Positive", "Negative")]
     vals = r.protein.loc["ERALPHA", samples]
     pos = vals[[s for s in samples if er[s] == "Positive"]]
@@ -83,7 +101,7 @@ def a1_run(r: Release) -> dict:
 
 
 def a1_slice(r: Release) -> dict[str, tuple]:
-    er = r.clinical.set_index("sampleID")[ER_COL]
+    er = _clinical(r).set_index("sampleID")[ER_COL]
     row = r.protein.loc["ERALPHA"]
     out = {}
     for s in r.protein.columns:
@@ -112,7 +130,8 @@ def a1_compare(b: dict, a: dict) -> Movement:
 # ---------- A2: RNA subtype mix of primary tumors ----------
 
 def a2_run(r: Release) -> dict:
-    c = r.clinical[r.clinical.sampleID.str[13:15] == "01"].dropna(subset=[PAM50_COL])
+    c = _clinical(r)
+    c = c[c.sampleID.str[13:15] == "01"].dropna(subset=[PAM50_COL])
     counts = c[PAM50_COL].value_counts().sort_index()
     total = int(counts.sum())
     return {"n_samples": total, "counts": {k: int(v) for k, v in counts.items()},
@@ -121,7 +140,8 @@ def a2_run(r: Release) -> dict:
 
 
 def a2_slice(r: Release) -> dict[str, tuple]:
-    c = r.clinical[r.clinical.sampleID.str[13:15] == "01"].dropna(subset=[PAM50_COL])
+    c = _clinical(r)
+    c = c[c.sampleID.str[13:15] == "01"].dropna(subset=[PAM50_COL])
     return {s: (v, f"PAM50 {v}") for s, v in zip(c.sampleID, c[PAM50_COL])}
 
 
