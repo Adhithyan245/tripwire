@@ -5,6 +5,7 @@ import argparse
 import json
 import pathlib
 import sys
+import textwrap
 import time
 
 from .contract import load_changes
@@ -59,7 +60,7 @@ def main(argv=None):
     print("  Questions:")
     for q in doc["questions"]:
         mark = "*" if q["id"] == args.question else " "
-        print(f" {mark} {q['id']:<34} {q['verdict']:<22} {q['why'][:110]}")
+        print(f" {mark} {q['id']:<34} {q['verdict']:<22} {textwrap.shorten(q['why'], 120, placeholder=' ...')}")
     print(f"  {len(doc['findings'])} finding(s), {len(doc['repairs'])} proposed repair(s) (none applied)")
     try:
         errs = validate(doc, args.challenge_dir)
