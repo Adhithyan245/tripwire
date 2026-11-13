@@ -11,7 +11,7 @@ CONFIG = {
     # Rerun the analyses the impact map says are unaffected, to check the map. If one moved anyway,
     # something changed that the detector didn't report, and the analysis is Blocked.
     "verify_unaffected": True,
-    "producer_team": "Tripwire",
+    "producer_team": "Skill issue",
 }
 
 VERDICT_ORDER = ["Ready", "Conditional", "Insufficient Evidence", "Blocked"]
