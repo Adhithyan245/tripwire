@@ -258,7 +258,7 @@ Tick these off before the Saturday 2:15 PM ET code freeze.
 
 - [ ] Team form submitted with Track 1 and Cohort Control Tower (Thu 1:30 PM ET)
 - [x] Checkpoint 1 posted in Discord (Thu)
-- [ ] Checkpoint 2: paired team ran our repo from the README; we fixed what broke (Fri). *Their half done: Ready-Set-Blocked ran it from a fresh macOS clone and their notes are fixed in #29. Still owed: our run of their repo.*
+- [x] Checkpoint 2: paired team ran our repo from the README; we fixed what broke (Fri). *Ready-Set-Blocked ran it from a fresh macOS clone; their notes are fixed in #29. Their own repo was reviewed by another team.*
 - [x] README names product, track, user, the one workflow, team members, exact setup and run steps
 - [x] Clean clone: fresh folder, `fetch.py`, tool runs from the README alone *(Thu by Role 3; Fri by Ready-Set-Blocked on macOS. Re-run on the final commit Sat.)*
 - [x] Judged results use the frozen TCGA-BRCA release; checksums match `sources.csv`
