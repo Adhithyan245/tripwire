@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 
 from . import __version__
-from .analyses import ANALYSES, ER_COL, PAM50_COL, public
+from .analyses import ANALYSES, ER_COL, PAM50_COL, public, slice_diff
 from .config import CONFIG, worst
 from .contract import Change, norm_id
 from .impact import map_impact
@@ -122,14 +122,15 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                                  "why": f"Missing input file(s): {a.files}", "title": a.title})
             verdicts[a.id] = "Insufficient Evidence"
             continue
-        before = after = mv = None
+        before = after = mv = sd = None
         if rerun:
             before, after = a.run(release_a), a.run(release_b)
             mv = a.compare(before, after)
-        v = release_verdict(imp.affected, mv)
+            sd = slice_diff(a.slice(release_a), a.slice(release_b))
+        v = release_verdict(imp.affected, mv, sd)
         verdicts[a.id] = v.verdict
-        if mv is not None and mv.moved and not imp.affected:
-            unexplained.append((a, before, after, mv))
+        if mv is not None and not imp.affected and (mv.moved or sd.any):
+            unexplained.append((a, mv, sd))
         entry = {"id": a.id, "status": "not_rerun" if mv is None else ("changed" if mv.moved else "unchanged"),
                  "title": a.title, "verdict": v.verdict, "why": v.reason, "impact": imp.why(len(changes)),
                  "inputs": a.files, "cohort": a.cohort}
@@ -137,6 +138,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
             entry["before"], entry["after"] = public(before), public(after)
             entry["rerun_reason"] = "affected by detected changes" if imp.affected else \
                 "verification rerun: the impact map said unaffected"
+            entry["input_changes"] = sd.counts()  # sample by sample, exactly what it reads
         analyses_out.append(entry)
 
     # ---- findings + repairs
@@ -180,20 +182,25 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                         "addresses": [fid]})
 
     unexplained_finding: dict[str, str] = {}
-    for a, before, after, mv in unexplained:
+    for a, mv, sd in unexplained:
         fid = f"F{len(findings) + 1}"
         unexplained_finding[a.id] = fid
+        moved = f"moved between releases ({mv.magnitude})" if mv.moved else "didn't move, but its inputs changed"
+        ev = [{"kind": "analysis", "id": a.id, "note": f"inputs: {', '.join(a.files)}"}]
+        ev += [{"kind": "sample", "id": s, "release": B, "note": "entered the data this analysis reads"} for s in sd.added]
+        ev += [{"kind": "sample", "id": s, "release": A, "note": "left the data this analysis reads"} for s in sd.removed]
+        ev += [{"kind": "sample", "id": s, "release": B, "note": f"{x} -> {y}"} for s, x, y in sd.changed]
         findings.append({
             "id": fid, "kind": "other",
-            "summary": f"{a.id} ({a.title}) moved between releases but no detected change explains it: {mv.magnitude}. "
-                       f"Membership changed for {len(set(before['sample_ids']) ^ set(after['sample_ids']))} sample(s).",
+            "summary": f"{a.id} ({a.title}) {moved}, and no detected change explains it. Sample by sample, the data it "
+                       f"reads changed for {len(sd.added) + len(sd.removed) + len(sd.changed)} sample(s): "
+                       f"{len(sd.added)} entered, {len(sd.removed)} left, {len(sd.changed)} with different values; "
+                       f"{sd.identical} are identical.",
             "severity": "high", "confidence": "high",
-            "evidence": [{"kind": "analysis", "id": a.id, "note": f"inputs: {', '.join(a.files)}"}]
-                        + [{"kind": "sample", "id": s, "release": B if s in after["sample_ids"] else A}
-                           for s in sorted(set(before["sample_ids"]) ^ set(after["sample_ids"]))[:20]],
+            "evidence": ev,
             "affects_analyses": [a.id], "not_affected_analyses": sorted(set(impacts) - {a.id}),
-            "limitation": "Caught by the verification rerun, not by the detector: Tripwire knows the result moved, "
-                          "not yet which change caused it.",
+            "limitation": "Caught by Tripwire's own check of what each analysis reads, not by the detector: every "
+                          "changed sample is listed, but the kind of change (swap, copy, relabel) isn't classified.",
             "needs_human_review": True,
         })
         repairs.append({"id": f"R{len(repairs) + 1}", "action": "flag_for_review",
