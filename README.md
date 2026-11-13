@@ -35,6 +35,20 @@ python -m tripwire diff ../oncosys-challenge/data/tcga-brca/raw ../oncosys-chall
 
 On Windows, `unseal.py` reports a fingerprint mismatch for `protein_rppa.tsv.gz`. The cause is CRLF line endings from pandas; the content is identical. Tripwire's content hashes normalise line endings, so ours match the organizers' published hashes on any OS.
 
+### Dashboard
+
+```bash
+streamlit run app/dashboard.py
+```
+
+The page opens at http://localhost:8501. From the sidebar you pick release B, or open a sealed envelope with its number and four words, choose a research question, and compare. The page shows:
+
+- **Verdicts first:** the overall verdict, each research question with its rule and checks not run, and each analysis with before and after values and its sample-by-sample input changes.
+- **Findings and evidence:** every finding with its severity reason, limitation and evidence table, plus a "trace one sample" view.
+- **Review:** a reviewer records approve, reject or request more evidence, with a reason and their role, for every proposed repair. Decisions go into `findings.json` (`decisions`, with `original_preserved: true`). Nothing is ever applied.
+- **What Tripwire can't see:** the blind spots, plus this run's unbuilt checks.
+- **Data and export:** a validator check, a download of `findings.json` with the decisions, and the HTML report.
+
 ## How the pieces plug together
 
 | Role | Plug-in point |
