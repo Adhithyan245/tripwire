@@ -35,7 +35,24 @@ git clone https://github.com/Adhithyan245/tripwire tripwire
 cd tripwire
 ```
 
-**2. Install**
+**2. Install** (check Python first: on a Mac, `python3` is often the old system 3.9)
+
+```bash
+python3 --version
+```
+
+If it says less than 3.11, install 3.11+ from python.org (or `brew install python@3.12`) and use that `python3`.
+Then make a virtual environment so nothing touches your system Python:
+
+```bash
+python3 -m venv .venv
+```
+```bash
+source .venv/bin/activate
+```
+
+On Windows: `py -3.11 -m venv .venv` then `.venv\Scriptsctivate`. Once it's active, `python` means the right
+version for every command below.
 
 ```bash
 pip install -r requirements.txt
