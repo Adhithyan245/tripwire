@@ -111,3 +111,17 @@ def test_question_output_validates(releases):
     doc = build([Change(x, "swap", "protein_rppa.tsv.gz", related_sample_id=y)], Release(a), Release(b),
                 question="predict_er_from_protein")
     assert validate(doc) == []
+
+
+def test_severity_follows_research_impact_with_reason(releases, all_checks_pass):
+    a, b, clinical, protein = releases
+    x, y = er_pair(clinical, protein)
+    write(b, clinical, swapped(protein, x, y))
+    ch = [Change(x, "swap", "protein_rppa.tsv.gz", related_sample_id=y),
+          Change("TCGA-T0-0001-01", "value_shift", "copy_number_gistic.tsv.gz")]  # touches nothing supported here
+    doc = build(ch, Release(a), Release(b))
+    swap = next(f for f in doc["findings"] if f["kind"] == "sample_swap")
+    other = next(f for f in doc["findings"] if f["kind"] == "other")
+    assert swap["severity"] == "high" and "predict_er_from_protein" in swap["severity_reason"]
+    assert other["severity"] == "low" and "touches no" in other["severity_reason"]
+    assert all(f.get("severity_reason") for f in doc["findings"])

@@ -165,7 +165,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         for f in sorted({f for c in chs for f in c.fields})[:20]:
             evidence.append({"kind": fk, "id": f} if fk else {"kind": "file", "id": file, "note": f"column {f}"})
         evidence = _dedupe(evidence)
-        severity = BASE_SEVERITY[kind] if affects else "low"
+        severity = BASE_SEVERITY[kind] if affects else "low"  # provisional; _rate_severity sets the final value
         findings.append({
             "id": fid, "kind": ch0.finding_kind, "summary": _summary(kind, chs, file, sub, count_note),
             "severity": severity, "confidence": "high" if kind != "value_shift" else "medium",
@@ -213,6 +213,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         questions.append(q)
     for f in findings:
         f["relevant_questions"] = [q["id"] for q in questions if f["id"] in q["relevant_findings"]]
+        _rate_severity(f, by_analysis, {q["id"]: q for q in questions})
 
     names = " and ".join(f"{a.id} ({a.title})" for a in ANALYSES)
     top_q = f"Did release {B} change anything that affects analyses {names}?"
@@ -237,6 +238,30 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         "settings": {k: v for k, v in CONFIG.items() if k != "producer_team"},
         "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
     }
+
+
+def _rate_severity(f: dict, analyses: dict, questions: dict) -> None:
+    """Severity = how much the change could move a research answer, with the reason written down.
+
+    Uses the verdicts of the analyses it touches and the release part of the questions it touches (not check gaps).
+    Those verdicts reflect all changes together, so the reason says "overall"."""
+    hits = [(aid, analyses[aid]["verdict"]) for aid in f.get("affects_analyses", []) if aid in analyses]
+    hits += [(qid, questions[qid]["release_part"]["verdict"]) for qid in f.get("relevant_questions", []) if qid in questions]
+    blocked = [n for n, v in hits if v == "Blocked"]
+    shaky = [n for n, v in hits if v in ("Conditional", "Insufficient Evidence")]
+    if blocked:
+        f["severity"] = "high"
+        f["severity_reason"] = f"It feeds results that are Blocked overall: {', '.join(blocked)}."
+    elif shaky:
+        f["severity"] = "medium"
+        f["severity_reason"] = (f"It changes inputs of {', '.join(shaky)}; those results stay within tolerance "
+                                "or lose samples, but aren't blocked.")
+    elif hits:
+        f["severity"] = "low"
+        f["severity_reason"] = f"It touches {', '.join(n for n, _ in hits)}, but none of their answers moved."
+    else:
+        f["severity"] = "low"
+        f["severity_reason"] = "It touches no reference analysis or supported research question."
 
 
 def _count(r: Release, file: str):
