@@ -121,6 +121,8 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
             out.append(Change(ma[k], "id_format_change", name, [], f"same sample, ID written as {mb[k]!r} in the new "
                               f"release (was {ma[k]!r})", ma[k], mb[k]))
     feats = a.index.intersection(b.index)
+    out += _dropped_fields(name, [str(f) for f in a.index.difference(b.index)],
+                           [mb[k] for k in sorted(ma.keys() & mb.keys())], "row")
     A = a.loc[feats].rename(columns=norm_id)
     B = b.loc[feats].rename(columns=norm_id)
     A, B = A.loc[:, ~A.columns.duplicated()], B.loc[:, ~B.columns.duplicated()]
@@ -312,6 +314,8 @@ def _diff_rows(name: str, a: pd.DataFrame, b: pd.DataFrame, key: str) -> list[Ch
                               ma[k], mb[k]))
     cols = [c for c in a.columns if c in b.columns and c != key]
     common = sorted(ma.keys() & mb.keys())
+    out += _dropped_fields(name, [c for c in a.columns if c not in b.columns and c != key],
+                           [mb[k] for k in common], "column")
     if common:
         A = a.loc[[ma[k] for k in common], cols].to_numpy()
         B = b.loc[[mb[k] for k in common], cols].to_numpy()
@@ -341,3 +345,12 @@ def _diff_rows(name: str, a: pd.DataFrame, b: pd.DataFrame, key: str) -> list[Ch
     for d in sorted(gone):
         out.append(Change(ma[d], "disappeared", name, [], f"row removed from {name}", "present", None))
     return out
+
+
+def _dropped_fields(name: str, dropped: list[str], samples: list[str], what: str) -> list[Change]:
+    """A row (protein, gene) or column (clinical field) present in A but gone from B: every sample lost it."""
+    if not dropped:
+        return []
+    shown = ", ".join(dropped[:5]) + (f" (+{len(dropped) - 5} more)" if len(dropped) > 5 else "")
+    return [Change(s, "coverage_loss", name, dropped[:MAX_FIELDS],
+                   f"{what}(s) {shown} removed from the new release's {name}", "present", None) for s in samples]
