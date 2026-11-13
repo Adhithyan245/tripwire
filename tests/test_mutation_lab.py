@@ -1,14 +1,16 @@
 """Synthetic tests; do not read the organizers' practice answer key."""
 import gzip
 import json
+import math
 import types
 
 import pandas as pd
 import pytest
 
-from tripwire.contract import Change
+from tripwire.contract import Change, norm_id
 from tripwire.mutation_lab import __main__ as cli
-from tripwire.mutation_lab.core import CLINICAL, PROTEIN, evaluate, generate
+from tripwire.mutation_lab.core import (CLINICAL, CONTROLS, COVERAGE_FRACTION, DESCRIPTIONS, ER_COL, PROTEIN,
+                                        SCENARIOS, evaluate, generate)
 from tripwire.mutation_lab.__main__ import main
 from tripwire.release import file_sha256
 
@@ -256,3 +258,223 @@ def test_cli_rejects_partial_or_malformed_truth(releases, tmp_path):
     truth.write_text('{}')
     with pytest.raises(SystemExit):
         main(["score", str(source), str(target), "--truth", str(truth)])
+
+
+# ------------------------------------------------ ID format, sample type and subgroup coverage scenarios
+
+ORIGINAL = ("unchanged", "reordered", "swap", "duplicate", "disappeared", "label_change", "value_shift")
+NEW = ("id_case_change", "id_whitespace", "sample_type_change", "coverage_loss")
+
+# TCGA-style barcodes with the same awkward text as RAW_*: blanks, NA, leading zeros, 1.50, 1e-3,
+# a non-numeric cell, a normal (11) whose 01 sibling exists, and a 06 sample with no ER label.
+BC = ["TCGA-AA-0001-01", "TCGA-AA-0002-01", "TCGA-AA-0003-01", "TCGA-AA-0004-01", "TCGA-AA-0001-11",
+      "TCGA-AA-0005-06"]
+RAW_BC_CLINICAL = ("sampleID\tbreast_carcinoma_estrogen_receptor_status\tage\tcode\n"
+                   f"{BC[0]}\tPositive\t45\t007\n{BC[1]}\tNegative\t\tNA\n{BC[2]}\tPositive\t50\t010\n"
+                   f"{BC[3]}\tNegative\t61\t\n{BC[4]}\tIndeterminate\t45\t\n{BC[5]}\t\t70\t\n")
+RAW_BC_PROTEIN = ("sample\t" + "\t".join(BC) + "\n"
+                  "ERALPHA\t1.50\t-0.2500\tNA\t2\t0.0\t3\n"
+                  "AKT\t0.1\t1e-3\t0.30\t\tx\t1.0\n")
+
+
+def test_original_scenarios_keep_names_and_order():
+    assert SCENARIOS[:len(ORIGINAL)] == ORIGINAL
+    assert set(SCENARIOS) == set(ORIGINAL) | set(NEW) == set(DESCRIPTIONS)
+    assert set(CONTROLS) == {"unchanged", "reordered"}
+
+
+@pytest.mark.parametrize("scenario", NEW)
+@pytest.mark.parametrize("seed", range(6))
+def test_new_scenarios_change_only_planted_cells_and_record_truth(tmp_path, scenario, seed):
+    source = write_raw(tmp_path / "A", RAW_BC_CLINICAL, RAW_BC_PROTEIN)
+    target = tmp_path / "B"
+    expected = generate(source, target, scenario, seed=seed)
+    assert expected and len({(c.change_type, c.file, c.sample_id) for c in expected}) == len(expected)
+    assert all(c.file == PROTEIN for c in expected)
+    old_p, new_p = read_text(source / PROTEIN, index_col=0), read_text(target / PROTEIN, index_col=0)
+    old_num = old_p.apply(pd.to_numeric, errors="coerce")
+    want_p = old_p.copy()
+    if scenario == "coverage_loss":
+        status = dict(zip(read_text(source / CLINICAL)["sampleID"], read_text(source / CLINICAL)[ER_COL]))
+        assert len({status[c.sample_id] for c in expected}) == 1  # concentrated in one subgroup
+        for c in expected:
+            assert c.change_type == "coverage_loss" and c.fields
+            assert old_num.loc[c.fields, c.sample_id].notna().all()  # only present values are blanked
+            assert c.before == f"{len(c.fields)} of {len(old_p.index)} values present"
+            assert c.after == f"0 of {len(old_p.index)} values present"
+            want_p.loc[c.fields, c.sample_id] = "NA"
+    else:
+        (c,) = expected
+        assert c.before == c.sample_id and c.after != c.before and c.fields == []
+        if scenario == "sample_type_change":
+            assert c.change_type == "sample_type_change" and c.related_sample_id == c.after
+            assert c.after[:12] == c.before[:12] and c.after[15:] == c.before[15:]
+            assert (c.before[13:15], c.after[13:15]) in {("01", "06"), ("06", "01")}
+            assert c.sample_id != BC[4]  # 11 -> 01 would collide with the existing primary sample
+        else:
+            assert c.change_type == "id_format_change" and norm_id(c.after) == norm_id(c.before)
+            if scenario == "id_whitespace":
+                assert c.after.strip() == c.before and c.after != c.before
+            else:
+                assert c.after.upper() == c.before.upper() and c.after.strip() == c.after
+        want_p = want_p.rename(columns={c.sample_id: c.after})
+    pd.testing.assert_frame_equal(new_p, want_p)
+    assert file_sha256(source / CLINICAL) == file_sha256(target / CLINICAL)
+
+
+@pytest.mark.parametrize("scenario", NEW)
+def test_new_scenarios_are_observable_reproducible_and_leave_source(releases, tmp_path, scenario):
+    source, target, _, _ = releases
+    hashes = {p.name: file_sha256(p) for p in source.iterdir()}
+    first = generate(source, target, scenario, seed=5)
+    again = generate(source, tmp_path / "again", scenario, seed=5)
+    assert [c.to_dict() for c in first] == [c.to_dict() for c in again]
+    picks = {tuple(c.sample_id for c in generate(source, tmp_path / f"s{seed}", scenario, seed=seed))
+             for seed in range(6)}
+    assert len(picks) > 1  # the seed really chooses
+    assert hashes == {p.name: file_sha256(p) for p in source.iterdir()}
+    old = pd.read_csv(source / PROTEIN, sep="\t", index_col=0)
+    new = pd.read_csv(target / PROTEIN, sep="\t", index_col=0)
+    if scenario == "coverage_loss":
+        for c in first:
+            assert old[c.sample_id].notna().any() and new[c.sample_id].isna().all()
+        untouched = [s for s in old.columns if s not in {c.sample_id for c in first}]
+        pd.testing.assert_frame_equal(old[untouched], new[untouched])
+    else:
+        (c,) = first
+        assert c.sample_id in old.columns and c.sample_id not in new.columns and c.after in new.columns
+        pd.testing.assert_series_equal(old[c.sample_id], new[c.after], check_names=False)
+        assert len(old.columns) == len(new.columns)
+
+
+def test_coverage_loss_is_concentrated_in_one_er_subgroup(releases):
+    source, target, clinical, protein = releases
+    expected = generate(source, target, "coverage_loss", seed=3)
+    status = dict(zip(clinical["sampleID"], clinical[ER_COL]))
+    (group,) = {status[c.sample_id] for c in expected}
+    members = [s for s in protein.columns if status[s] == group]
+    assert len(expected) == math.ceil(COVERAGE_FRACTION * len(members))
+    old = pd.read_csv(source / PROTEIN, sep="\t", index_col=0)
+    new = pd.read_csv(target / PROTEIN, sep="\t", index_col=0)
+
+    def missing_rate(df, er):
+        cols = [s for s in df.columns if status.get(s) == er]
+        return df[cols].isna().to_numpy().mean()
+    other = "Negative" if group == "Positive" else "Positive"
+    assert missing_rate(new, group) > missing_rate(old, group)
+    assert missing_rate(new, other) == missing_rate(old, other)
+
+
+def test_sample_type_change_skips_ambiguous_candidates(tmp_path):
+    ids = ["TCGA-AA-0001-01", "TCGA-AA-0001-06",   # each one's new ID already exists
+           "TCGA-AA-0002-01", "TCGA-AA-0003-01",   # numerically identical profiles (2 vs 2.0)
+           "TCGA-AA-0004-01",                      # no values
+           "TCGA-AA-0006-01",                      # new ID 0006-06 exists in clinical.tsv
+           "TCGA-AA-0007-02",                      # type code the lab does not rewrite
+           "S9",                                   # not a barcode
+           "TCGA-AA-0005-01"]                      # the only valid choice
+    protein = ("sample\t" + "\t".join(ids) + "\n"
+               "ERALPHA\t1\t2\t2\t2.0\tNA\t5\t6\t7\t8\n"
+               "AKT\t1\t3\t4\t4\t\t5\t6\t7\t9\n")
+    clinical = "sampleID\tbreast_carcinoma_estrogen_receptor_status\n" + \
+        "".join(f"{s}\tPositive\n" for s in ids) + "TCGA-AA-0006-06\tNegative\n"
+    source = write_raw(tmp_path / "A", clinical, protein)
+    for seed in range(8):
+        (change,) = generate(source, tmp_path / f"B{seed}", "sample_type_change", seed=seed)
+        assert (change.sample_id, change.after) == ("TCGA-AA-0005-01", "TCGA-AA-0005-06")
+
+
+def test_new_scenarios_refuse_unsuitable_sources_before_any_output(tmp_path):
+    source = write_raw(tmp_path / "A")  # S1..S4: not barcodes
+    with pytest.raises(ValueError, match="TCGA barcode"):
+        generate(source, tmp_path / "B", "sample_type_change")
+    no_er = write_raw(tmp_path / "A2", clinical="sampleID\tage\nS1\t1\nS2\t2\n")
+    with pytest.raises(ValueError, match="missing"):
+        generate(no_er, tmp_path / "B", "coverage_loss")
+    unlabelled = write_raw(tmp_path / "A3", clinical=f"sampleID\t{ER_COL}\nS1\tIndeterminate\nS2\t\n")
+    with pytest.raises(ValueError, match="ER Positive or Negative"):
+        generate(unlabelled, tmp_path / "B", "coverage_loss")
+    no_letters = write_raw(tmp_path / "A4", protein="sample\t101\t102\nERALPHA\t1\t2\n")
+    with pytest.raises(ValueError, match="case"):
+        generate(no_letters, tmp_path / "B", "id_case_change")
+    assert not (tmp_path / "B").exists()
+
+
+def test_id_scenarios_skip_ids_that_already_differ_only_by_format(tmp_path):
+    # "S1" and "s1" already share a comparison key, so neither may be the planted sample.
+    source = write_raw(tmp_path / "A", protein="sample\tS1\ts1\t123\tAB\nERALPHA\t1\t2\t3\t4\n")
+    for seed in range(8):
+        (case,) = generate(source, tmp_path / f"C{seed}", "id_case_change", seed=seed)
+        assert (case.sample_id, case.after) == ("AB", "ab")
+        (space,) = generate(source, tmp_path / f"W{seed}", "id_whitespace", seed=seed)
+        assert space.sample_id in {"123", "AB"}
+
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_truth_scores_perfectly_against_itself(releases, scenario):
+    # Self-consistency of the answer key: unique keys, no partner or type mismatch with itself.
+    source, target, _, _ = releases
+    expected = generate(source, target, scenario, seed=8)
+    report = evaluate(expected, list(expected))
+    assert report["reported_as_other_type"] == []
+    assert all(r["false_positives"] == r["false_negatives"] == 0 and r["recall"] == 1
+               and r["partner_matches"] == r["expected_with_partner"] for r in report["by_change_type"])
+    if scenario in CONTROLS:
+        assert expected == [] and report["false_positives_on_no_change"] == 0
+
+
+def test_controls_flag_any_report_as_false_positive():
+    stray = [Change("x", "id_format_change", PROTEIN), Change("y", "coverage_loss", PROTEIN)]
+    report = evaluate([], stray)
+    assert report["false_positives_on_no_change"] == 2
+    assert all(r["precision"] == 0 and r["recall"] is None for r in report["by_change_type"])
+    assert report["reported_as_other_type"] == []
+
+
+def test_other_type_reports_expose_interpretation_without_changing_strict_counts():
+    expected = [Change("a", "coverage_loss", PROTEIN), Change("b", "coverage_loss", PROTEIN),
+                Change("c", "sample_type_change", PROTEIN), Change("d", "id_format_change", PROTEIN)]
+    observed = [Change("a", "value_shift", PROTEIN),          # same sample and file, other type
+                Change("b", "value_shift", CLINICAL),         # other file: not paired
+                Change("z", "value_shift", PROTEIN),          # other sample: not paired
+                Change("c", "disappeared", PROTEIN),          # same sample, other type
+                Change("d", "id_format_change", PROTEIN)]     # exact match: not listed
+    report = evaluate(expected, observed)
+    by = {r["change_type"]: r for r in report["by_change_type"]}
+    assert by["coverage_loss"]["false_negatives"] == 2 and by["coverage_loss"]["true_positives"] == 0
+    assert by["coverage_loss"]["missed_but_reported_as_other_type"] == 1
+    assert by["value_shift"]["false_positives"] == 3
+    assert by["sample_type_change"]["missed_but_reported_as_other_type"] == 1
+    assert by["id_format_change"]["true_positives"] == 1
+    assert by["id_format_change"]["missed_but_reported_as_other_type"] == 0
+    assert report["reported_as_other_type"] == [
+        {"expected_type": "coverage_loss", "reported_type": "value_shift", "count": 1},
+        {"expected_type": "sample_type_change", "reported_type": "disappeared", "count": 1}]
+
+
+def test_one_report_is_not_paired_with_two_misses():
+    expected = [Change("a", "coverage_loss", PROTEIN), Change("a", "sample_type_change", PROTEIN)]
+    report = evaluate(expected, [Change("a", "value_shift", PROTEIN)])
+    assert sum(x["count"] for x in report["reported_as_other_type"]) == 1
+
+
+def test_cli_lists_scenarios(capsys):
+    assert main(["scenarios"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert [line.split(":")[0].split(" ")[0] for line in lines] == list(SCENARIOS)
+    assert sum("no-change control" in line for line in lines) == len(CONTROLS)
+
+
+def test_cli_scores_coverage_loss_and_explains_type_mismatch(releases, tmp_path, capsys):
+    source, target, _, _ = releases
+    truth = tmp_path / "truth.json"
+    assert main(["generate", str(source), str(target), "--scenario", "coverage_loss", "--truth", str(truth)]) == 0
+    manifest = json.loads(truth.read_text())
+    assert manifest["changes"] and {c["change_type"] for c in manifest["changes"]} == {"coverage_loss"}
+    capsys.readouterr()
+    assert main(["score", str(source), str(target), "--truth", str(truth)]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["expected_total"] == len(manifest["changes"]) and report["truth_hashes_verified"]
+    assert "reported_as_other_type" in report
+    if report["reported_as_other_type"]:
+        assert any("another change type" in line for line in report["limitations"])
