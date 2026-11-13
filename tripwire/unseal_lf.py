@@ -4,6 +4,11 @@ On Windows pandas writes CRLF by default, so the files unseal.py rebuilds differ
 fingerprint check then reports a false mismatch ("Tell a judge right away"). On macOS and Linux pandas already writes
 LF. Forcing LF here reproduces exactly what the organizers' script produces there; the check itself is untouched.
 
+The organizers fixed this upstream on Nov 12 (challenge repo d0fbebd: unseal.py now passes lineterminator='
+'
+itself). setdefault() leaves their explicit value alone, so this shim is harmless on the fixed version and still
+protects older clones.
+
 Run from the challenge repo root: python -m tripwire.unseal_lf <envelope> <four words>
 """
 import runpy
