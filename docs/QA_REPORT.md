@@ -1,5 +1,20 @@
 # Role 3 QA: integrated run
 
+## November 13 rehearsal (Friday, America/New_York)
+
+This is a rehearsal, not the requested Saturday morning final check. A fresh macOS checkout tested Tripwire `e2f662b89948b0c99a30f2ecde1d2c9f86c16880` and organizer repo `d0fbebd53b16681ba939b61b38d3475e2c99aaab` with Python 3.13.12 and a new virtual environment. Five no-RNA release A files passed the published checksums.
+
+- **Fresh-clone workflow:** the README data fetch failed with `SSL: CERTIFICATE_VERIFY_FAILED` on this Python installation. Retrying it with `SSL_CERT_FILE="$(python -c 'import certifi; print(certifi.where())')"` before the fetch command succeeded without disabling certificate verification. Doctor then passed, the practice envelope opened, and the organizer validator returned `valid`. Tripwire reported 1.6 seconds to write the practice findings after unsealing (unsealing reported 1.0 seconds). Total clean-setup time was not measured, so these timings are not fresh-clone timings.
+- **Mutation Lab:** 20 of 20 scenarios were exact with seed 1 (19.1 seconds). Exact means no missed or extra sample/type/file matches; these are development mutations, not held-out validation. A vanished file contributes 1,080 sample-level findings, so pooled counts are not representative of per-scenario performance. Partner correctness and evidence quality are not measured by this score.
+- **Tests:** 234 passed; one pandas fragmentation performance warning.
+- **Gitleaks:** `gitleaks git --no-banner --redact --log-opts=e2f662b89948b0c99a30f2ecde1d2c9f86c16880 .` scanned 30 reachable commits and reported no leaks. This is not a scan of Saturday's final commit.
+
+**Saturday still required:** time a new README-only fresh clone against the final `dev`, record any stumbling step, rerun the Mutation Lab and validator, and scan the final commit with Gitleaks. Replace this status with the actual Saturday results, including the tested commit SHA.
+
+## Historical November 12 results
+
+The sections below describe earlier code and are retained for context. The dependency issue was subsequently fixed and #16 closed; the historical coverage-loss classification gap was fixed in the later code exercised above.
+
 This is a snapshot of an evaluation, not a claim of clinical validity or performance on all releases. Run on November 12, 2026 against Tripwire `a4276964e24b205f02a28527d52898938b08f807` and organizer challenge repository `d0fbebd53b16681ba939b61b38d3475e2c99aaab`. Input: the organizers' TCGA-BRCA release A, five files fetched with `--no-rna` and verified by their pinned checksums. No practice answer key or reference findings example was opened.
 
 ## Reproducibility and live workflow
