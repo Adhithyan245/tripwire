@@ -25,6 +25,7 @@ DESCRIPTIONS = {
     "new_sample": "a new sample with a fresh profile",
     "vanished_file": "the copy-number file missing from the new release",
     "relabel_pam50": "three samples' PAM50 subtype changed in clinical.tsv",
+    "repeated_id": "one protein sample's column and one clinical row each listed twice (counted twice)",
     "resaved_clinical": "no-change control: clinical.tsv re-saved by another tool (55 -> 55.0)",
 }
 EXTENDED = tuple(DESCRIPTIONS)
@@ -48,6 +49,12 @@ def _text(path: Path, **kw) -> pd.DataFrame:
 
 def _write_matrix(df: pd.DataFrame, path: Path) -> None:
     df.to_csv(path, sep="\t", lineterminator="\n", compression={"method": "gzip", "mtime": 0})
+
+
+def _gz_lines(path: Path) -> list[str]:
+    import gzip
+    with gzip.open(path, "rt", encoding="utf-8", newline="") as f:
+        return f.read().splitlines()
 
 
 def _primary(cols) -> list[str]:
@@ -117,6 +124,20 @@ def generate_extended(source: Path, target: Path, scenario: str, seed: int = 0) 
             clin.at[r, col] = new
         clin.to_csv(clin_path, sep="\t", index=False, lineterminator="\n")
         return out
+    if scenario == "repeated_id":
+        s = rng.choice(prim)
+        rows = _gz_lines(prot_path)
+        col = rows[0].split("\t").index(s)
+        rows = [ln + "\t" + ln.split("\t")[col] for ln in rows]  # the ID again in the header, its values in rows
+        import gzip
+        with gzip.open(prot_path, "wt", encoding="utf-8", newline="") as f:
+            f.write("\n".join(rows) + "\n")
+        r = rng.choice(sorted(clin.index[clin["sampleID"].str[13:15] == "01"].tolist()))
+        pd.concat([clin, clin.loc[[r]]], ignore_index=True).to_csv(clin_path, sep="\t", index=False,
+                                                                  lineterminator="\n")
+        sid = clin.at[r, "sampleID"]
+        return [Change(s, "duplicate", PROTEIN, [], "column listed twice", 1, 2),
+                Change(sid, "duplicate", CLINICAL, [], "row listed twice", 1, 2)]
     # resaved_clinical: same values, different formatting; nothing should be reported
     pd.read_csv(target / CLINICAL, sep="\t", low_memory=False).to_csv(clin_path, sep="\t", index=False,
                                                                        lineterminator="\n")

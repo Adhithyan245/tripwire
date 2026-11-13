@@ -13,7 +13,9 @@ envelopes leave out by design.
 """
 from __future__ import annotations
 
+import gzip
 import hashlib
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -39,11 +41,32 @@ def detect_changes(release_a: Release, release_b: Release) -> list[Change]:
     for name in sorted(set(release_a.files) & set(release_b.files)):
         if content_sha256(release_a.path / name) == content_sha256(release_b.path / name):
             continue  # identical content (line endings aside): nothing can have changed
+        out += _repeated_ids(name, _all_ids(release_a, name), _all_ids(release_b, name))
         if name in ROW_FILES:
             out += _diff_rows(name, _read_rows(release_a, name), _read_rows(release_b, name), ROW_FILES[name])
         else:
             out += _diff_matrix(name, _read_matrix(release_a, name), _read_matrix(release_b, name))
     return out
+
+
+def _all_ids(r: Release, name: str) -> list[str]:
+    """Every sample ID exactly as written, repeats included (pandas renames a repeated column to 'ID.1')."""
+    if name in ROW_FILES:
+        return _read_rows(r, name)[ROW_FILES[name]].tolist()
+    opener = gzip.open if name.endswith(".gz") else open
+    with opener(r.path / name, "rt", encoding="utf-8", newline="") as f:
+        return f.readline().rstrip("\r\n").split("\t")[1:]
+
+
+def _repeated_ids(name: str, ids_a: list[str], ids_b: list[str]) -> list[Change]:
+    """A sample ID listed more often than before: its data is counted twice (join inflation)."""
+    ca, cb = Counter(map(norm_id, ids_a)), Counter(map(norm_id, ids_b))
+    first = {}
+    for s in ids_b:
+        first.setdefault(norm_id(s), s)
+    return [Change(first[k], "duplicate", name, [], f"sample ID appears {n} times in the new release's {name} "
+                   f"(was {ca.get(k, 0)}), so its data would be counted {n} times", ca.get(k, 0), n)
+            for k, n in sorted(cb.items()) if n > 1 and n > ca.get(k, 0)]
 
 
 def _vanished_file(r: Release, name: str) -> list[Change]:
@@ -84,9 +107,10 @@ def _informative(col: np.ndarray) -> bool:
 # ---------------------------------------------------------------- molecular files
 
 def _read_matrix(r: Release, name: str) -> pd.DataFrame:
-    if name == "protein_rppa.tsv.gz":
-        return r.protein
-    return pd.read_csv(r.path / name, sep="	", index_col=0)
+    df = r.protein if name == "protein_rppa.tsv.gz" else pd.read_csv(r.path / name, sep="\t", index_col=0)
+    # A repeated column ID comes back as 'ID.1', 'ID.2'; keep the first copy. _repeated_ids reports the repeat.
+    real = set(_all_ids(r, name))
+    return df[[c for c in df.columns if c in real]] if len(real) < df.shape[1] else df
 
 
 def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
