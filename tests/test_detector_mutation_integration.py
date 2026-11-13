@@ -1,6 +1,6 @@
 """Exercise the real detector against independent, seeded mutation scenarios.
 
-Until Role 1 merges a detector, these tests skip rather than crediting a stub.
+The merged detector is exercised; a stub is skipped rather than credited as a pass.
 They do not use the organizers' practice answer key, and they do not tune or change the detector:
 where the detector's interpretation differs from the planted change type, the test says so.
 """
@@ -61,11 +61,6 @@ def test_detector_against_subgroup_coverage_loss(releases, seed):
     # (the other subgroup and the unchosen members are untouched).
     assert len(observed) == len(expected), report
     assert {(c.file, c.sample_id) for c in observed} == {(c.file, c.sample_id) for c in expected}, report
-    row = next(r for r in report["by_change_type"] if r["change_type"] == "coverage_loss")
-    if row["false_negatives"]:
-        # Not hidden: every miss is accounted for as a same-sample report of another type.
-        assert row["missed_but_reported_as_other_type"] == row["false_negatives"], report
-        kinds = sorted({x["reported_type"] for x in report["reported_as_other_type"]})
-        pytest.xfail(f"detector reports subgroup coverage loss per sample as {kinds}, not coverage_loss; "
-                     f"{row['false_negatives']} of {row['expected']} strict misses")
-    assert all(r["false_positives"] == 0 for r in report["by_change_type"]), report
+    assert all(r["false_positives"] == 0 and r["false_negatives"] == 0
+               for r in report["by_change_type"]), report
+    assert report["reported_as_other_type"] == [], report
