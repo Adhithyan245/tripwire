@@ -40,7 +40,7 @@ Rehearse with the public practice envelope:
 python -m tripwire envelope practice orange meadow pilot lantern
 ```
 
-The command runs `unseal.py` unchanged, on any OS. On Windows it fixes two problems with running it directly. The script's check marks crash the console, so it sets `PYTHONUTF8=1`. And pandas would write CRLF line endings, so the script's own fingerprint check would report a false mismatch; it has pandas write LF, as on macOS and Linux (`tripwire/unseal_lf.py`). An envelope that's already open is compared without unsealing again.
+The command runs `unseal.py` unchanged, on any OS. On Windows it also sets `PYTHONUTF8=1`, because the script's ✓ marks crash a Windows console otherwise (still true after the organizers' Nov 12 update). The organizers have since fixed the CRLF line-ending mismatch in `unseal.py` and `make_release.py` (challenge repo `d0fbebd`). Our LF shim (`tripwire/unseal_lf.py`) is now redundant there, but it keeps older copies of the challenge repo working. An envelope that's already open is compared without unsealing again.
 
 ### Human-readable report
 
