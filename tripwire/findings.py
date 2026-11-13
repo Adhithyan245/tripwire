@@ -69,6 +69,25 @@ def _subgroups(ids, clinical) -> str:
     return "; ".join(bits)
 
 
+def _concentration(ids, clinical, min_n: int = 3, max_share: float = 0.25) -> str:
+    """One sentence when every affected sample shares a rare subtype: a change that picks out one subgroup is not
+    random, and it matters most for questions that count or compare subgroups."""
+    if PAM50_COL not in clinical.columns:
+        return ""
+    lab = clinical.assign(_k=clinical["sampleID"].map(norm_id)).drop_duplicates("_k").set_index("_k")[PAM50_COL]
+    lab = lab[lab.map(lambda v: isinstance(v, str) and bool(v))]
+    vals = [lab[norm_id(i)] for i in ids if norm_id(i) in lab.index]
+    if len(vals) < min_n or len(set(vals)) != 1:
+        return ""
+    sub, share = vals[0], float((lab == vals[0]).mean())
+    if share > max_share:
+        return ""
+    odds = share ** len(vals)
+    return (f"All {len(vals)} are {sub}, a subtype that is {share:.1%} of labelled samples in release A; by chance that would happen about "
+            f"1 time in {round(1 / odds):,}, so this change hit one subgroup. Questions that count or compare "
+            f"subtypes are hit hardest.")
+
+
 def _summary(kind: str, chs: list[Change], file: str, sub: str, count_note: str) -> str:
     n = len(chs)
     ids = sorted({c.sample_id for c in chs})
@@ -167,6 +186,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         not_aff = sorted(set(impacts) - set(affects))
         ids = {c.sample_id for c in chs} | {c.related_sample_id for c in chs if c.related_sample_id}
         sub = ""
+        count_note = ""
         if release_a.has("clinical.tsv"):
             if kind == "duplicate" and any(c.related_sample_id for c in chs):
                 src = _subgroups({c.related_sample_id for c in chs if c.related_sample_id}, release_a.clinical)
@@ -174,9 +194,11 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                 sub = f"copied from samples labelled {src}" + (f"; the copies sit under IDs labelled {own}" if own else "")
             else:
                 sub = _subgroups(ids, release_a.clinical)
-        count_note = ""
+                conc = _concentration(ids, release_a.clinical)
+                if conc:
+                    count_note = conc
         if kind in ("appeared", "disappeared") and a_count.get(file) is not None and a_count.get(file) == b_count.get(file):
-            count_note = f"The total sample count in {file} is unchanged ({a_count[file]}), so a count check would miss this."
+            count_note = (count_note + " " if count_note else "") + f"The total sample count in {file} is unchanged ({a_count[file]}), so a count check would miss this."
         side = A if kind in ("disappeared", "coverage_loss") else B
         evidence = []
         for c in chs:

@@ -17,6 +17,7 @@ FILES = {"protein_rppa.tsv.gz", "clinical.tsv"}  # what the reference analyses r
 def _overlay(a: Release, b: Release, action: str, targets: list[dict]) -> Release:
     ov = Release(b.path, name=f"{b.name} (preview)")
     prot, clin = b.protein.copy(), b.clinical.copy()
+    restored = {}  # A's profiles to put back, added in one step (column-by-column inserts fragment the frame)
     a_prot = {norm_id(s): s for s in a.protein.columns}
     a_clin = a.clinical.set_index(a.clinical["sampleID"].map(norm_id))
     for t in targets:
@@ -29,7 +30,7 @@ def _overlay(a: Release, b: Release, action: str, targets: list[dict]) -> Releas
                 prot = prot.drop(columns=b_cols)
             elif norm_id(sid) in a_prot:  # restore A's profile under A's ID
                 prot = prot.drop(columns=b_cols)
-                prot[a_prot[norm_id(sid)]] = a.protein[a_prot[norm_id(sid)]].reindex(prot.index)
+                restored[a_prot[norm_id(sid)]] = a.protein[a_prot[norm_id(sid)]]
             else:
                 prot = prot.drop(columns=b_cols)
         elif f == "clinical.tsv":
@@ -41,6 +42,10 @@ def _overlay(a: Release, b: Release, action: str, targets: list[dict]) -> Releas
                 clin = clin[~mask]
                 clin = clin._append(row, ignore_index=True) if hasattr(clin, "_append") else \
                     __import__("pandas").concat([clin, row], ignore_index=True)
+    if restored:
+        import pandas as pd
+        prot = pd.concat([prot.drop(columns=[c for c in restored if c in prot.columns]),
+                          pd.DataFrame(restored).reindex(prot.index)], axis=1)
     ov.__dict__["protein"], ov.__dict__["clinical"] = prot, clin
     return ov
 
@@ -77,13 +82,30 @@ def preview_all(repairs: list[dict], a: Release, b: Release) -> dict:
     ov = b
     for r in usable:
         ov = _overlay(a, ov, r["action"], r.get("targets", []))
+    open_ids = [r["id"] for r in repairs if r not in usable]
     out = []
     for an in ANALYSES:
         before, fixed = an.run(a), an.run(ov)
         mv = an.compare(before, fixed)
-        out.append({"analysis": an.id, "if_approved": public(fixed),
-                    "verdict_if_approved": release_verdict(True, mv).verdict if mv.moved else "Ready",
-                    "summary": f"{an.id}: {mv.magnitude} vs release {a.name}."})
+        verdict = release_verdict(True, mv).verdict if mv.moved else "Ready"
+        row = {"analysis": an.id, "if_approved": public(fixed), "verdict_if_approved": verdict,
+               "summary": f"{an.id}: {mv.magnitude} vs release {a.name}."}
+        if verdict != "Ready":
+            row["why_not_ready"] = _why_not_ready(before, fixed, open_ids)
+            row["summary"] += f" Stays {verdict}: {row['why_not_ready']}"
+        out.append(row)
     return {"repairs": [r["id"] for r in usable], "analyses": out,
             "note": "All of these repairs approved together, on a copy of the new release; nothing is applied. "
                     "Repairs that only ask for a check (flag_for_review) can't be previewed."}
+
+
+def _why_not_ready(before, fixed, open_ids: list[str]) -> str:
+    """Why an analysis whose number is back to release A's still isn't Ready: its inputs still differ from A's."""
+    n_a, n_f = public(before).get("n_samples"), public(fixed).get("n_samples")
+    bits = []
+    if isinstance(n_a, int) and isinstance(n_f, int) and n_a != n_f:
+        bits.append(f"it would read {n_f} samples, release A has {n_a}")
+    if open_ids:
+        bits.append(f"{', '.join(open_ids)} only asks for a check, so it can't be previewed and is still open")
+    why = "; ".join(bits) or "its inputs still differ from release A's"
+    return f"the result matches, but {why}. Ready needs the same inputs, so a person signs off on the rest."
