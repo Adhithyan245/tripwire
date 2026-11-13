@@ -42,7 +42,9 @@ def test_missing_input_says_data_cannot_answer(releases):
     assert q["coverage"]["unavailable"] == q["required_checks"]
 
 
-def test_unbuilt_checks_are_never_a_pass(releases):
+def test_unbuilt_checks_are_never_a_pass(releases, monkeypatch):
+    for name in ("patient_leakage", "site_confounding"):  # simulate checks that haven't been built
+        monkeypatch.delitem(questions.CHECKS, name)
     a, _, _, _ = releases
     q = qv(build([], Release(a), Release(a, name="again")))["predict_er_from_protein"]
     assert q["release_part"]["verdict"] == "Ready"

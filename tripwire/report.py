@@ -114,6 +114,10 @@ def render(doc: dict) -> str:
                         f"<td><b>{esc(q.get('title'))}</b><div class='small muted'>{esc(q.get('intended_use'))} · "
                         f"{esc(q.get('cohort'))}</div></td><td>{esc(q.get('why'))}"
                         + (f"<div class='small muted'>Checks not run (not a pass): {esc(', '.join(gaps))}</div>" if gaps else "")
+                        + "".join(f"<div class='small'><b>{esc(c.get('name'))}</b> ({esc(c.get('status'))}): "
+                                  f"{esc(c.get('summary'))}" + (f" <b>Fix:</b> {esc(c['fix'])}" if c.get("fix") else "")
+                                  + "</div>" for c in q.get("checks", [])
+                                  if c.get("status") not in ("skipped", "unavailable"))
                         + f"</td><td>{esc(', '.join(q.get('relevant_findings', [])) or '—')}</td></tr>")
         out.append("<div class='scroll'><table><tr><th>verdict</th><th>question</th><th>why</th><th>findings</th></tr>"
                    + "".join(rows) + "</table></div>")
@@ -149,11 +153,22 @@ def render(doc: dict) -> str:
     if repairs:
         out.append("<h2>Proposed repairs</h2><p class='small muted'>Proposals for a reviewer to approve, reject or ask "
                    "more about. Nothing here has been applied.</p>")
+        def _pv(r):
+            pv = r.get("preview") or {}
+            lines = [esc(x.get("summary")) for x in pv.get("analyses", [])]
+            return "<br>".join(lines) or f"<span class='muted'>{esc(pv.get('note', ''))}</span>"
         rows = "".join(f"<tr><td><code>{esc(r.get('id'))}</code></td><td>{esc(r.get('action'))}</td>"
                        f"<td>{esc(', '.join(r.get('addresses', [])))}</td><td>{esc(r.get('justification'))}</td>"
-                       f"<td>{len(r.get('targets', []))}</td></tr>" for r in repairs)
+                       f"<td>{len(r.get('targets', []))}</td><td class='small'>{_pv(r)}</td></tr>" for r in repairs)
         out.append("<div class='scroll'><table><tr><th>id</th><th>action</th><th>for</th><th>justification</th>"
-                   f"<th>targets</th></tr>{rows}</table></div>")
+                   f"<th>targets</th><th>if approved (on a copy)</th></tr>{rows}</table></div>")
+        allp = doc.get("repair_preview_all") or {}
+        if allp.get("analyses"):
+            out.append("<div class='card'><b>If every proposed repair were approved</b> "
+                       f"({esc(', '.join(allp.get('repairs', [])))}):<br>"
+                       + "<br>".join(f"{pill(x.get('verdict_if_approved'), VERDICT_CLASS.get(x.get('verdict_if_approved'), 'muted'))} "
+                                     f"{esc(x.get('summary'))}" for x in allp["analyses"])
+                       + f"<div class='small muted'>{esc(allp.get('note', ''))}</div></div>")
 
     if doc.get("decisions"):
         rows = "".join(f"<tr><td><code>{esc(d.get('repair_id'))}</code></td><td>{esc(d.get('decision'))}</td>"

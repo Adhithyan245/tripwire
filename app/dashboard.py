@@ -359,6 +359,13 @@ with tabs[0]:
                 st.write(q["why"])
                 if gaps:
                     st.caption(f"Checks not run (not a pass): {', '.join(gaps)}")
+                ran = [c for c in q.get("checks", []) if c.get("status") not in ("skipped", "unavailable")]
+                if ran:
+                    icon = {"pass": "✅", "fixable": "🟠", "insufficient": "⚪", "fail": "🔴"}
+                    with st.expander(f"Readiness checks ({len(ran)})"):
+                        for c in ran:
+                            st.markdown(f"{icon.get(c['status'], '•')} **{c['name']}** ({c['status']}): {c['summary']}"
+                                        + (f"  \n**Fix:** {c['fix']}" if c.get("fix") else ""))
                 if q.get("relevant_findings"):
                     st.caption(f"Relevant findings: {', '.join(q['relevant_findings'])}")
     st.subheader("Analyses")
@@ -421,6 +428,13 @@ with tabs[1]:
 with tabs[2]:
     st.caption("A reviewer decides on each proposed repair. Recording a decision never applies the repair or changes "
                "source data.")
+    allp = doc.get("repair_preview_all") or {}
+    if allp.get("analyses"):
+        with st.container(border=True):
+            st.markdown(f"**If every proposed repair were approved** ({', '.join(allp.get('repairs', []))})")
+            for x in allp["analyses"]:
+                st.markdown(f"{verdict_badge(x['verdict_if_approved'])} {x['summary']}")
+            st.caption(allp.get("note", ""))
     role = st.text_input("Your role", st.session_state.get("role", ""), placeholder="e.g. data curator")
     st.session_state["role"] = role
     for r in doc.get("repairs", []):
@@ -430,6 +444,12 @@ with tabs[2]:
                         + ("  :green[✓ decided]" if done else ""))
             st.write(r["justification"])
             st.caption("Targets: " + ", ".join(t["id"] for t in r.get("targets", []))[:400])
+            pv = r.get("preview") or {}
+            for x in pv.get("analyses", []):
+                st.markdown(f"If approved: {verdict_badge(x['verdict_now'])} → "
+                            f"{verdict_badge(x['verdict_if_approved'])} · {x['summary']}")
+            if pv.get("note"):
+                st.caption(pv["note"])
             prev = decisions.get(r["id"], {})
             widget_id = f"{st.session_state['document_generation']}_{r['id']}"
             d = st.radio("Decision", DECISIONS, format_func=LABELS.get, key=f"d_{widget_id}", horizontal=True,
