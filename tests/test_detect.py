@@ -178,3 +178,14 @@ def test_repeated_clinical_row_is_reported(releases):
     write(b, c2, protein)
     ch = detect_changes(Release(a), Release(b))
     assert [(c.change_type, c.file, c.sample_id) for c in ch] == [("duplicate", "clinical.tsv", clinical.sampleID[5])]
+
+
+def test_chain_of_swaps_is_reported_as_swaps(releases):
+    """A gets C's profile, B gets A's, C gets B's: no pair exchanges directly, but all three are swaps."""
+    a, b, clinical, protein = releases
+    x, y, z = [c for c in protein.columns if c[13:15] == "01"][:3]
+    rotated = protein.rename(columns={x: y, y: z, z: x})[protein.columns]
+    write(b, clinical, rotated)
+    ch = detect_changes(Release(a), Release(b))
+    assert {(c.change_type, c.sample_id) for c in ch} == {("swap", x), ("swap", y), ("swap", z)}
+    assert all(c.related_sample_id in {x, y, z} - {c.sample_id} for c in ch)

@@ -195,8 +195,16 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
                               "own profile is gone", "own profile", f"copy of {raw(src, 'B')}",
                               related_sample_id=raw(src, "B")))
             done.add(s)
+        elif src and src in common and hb.get(src) != ha.get(src):
+            # Part of a chain of swaps (A gets B's profile, B gets C's, C gets A's): no pair exchanges directly,
+            # but each sample now carries another's previous profile, and that sample's own profile moved too.
+            out.append(Change(raw(s, "B"), "swap", name, [], f"profile is {how} to {raw(src, 'A')}'s in the previous "
+                              f"release, and {raw(src, 'B')}'s own profile changed too (part of a chain of swaps)",
+                              "own profile", f"profile of {raw(src, 'A')}", related_sample_id=raw(src, "B")))
+            done.add(s)
         else:
-            out.append(_value_change(name, raw(s, "B"), feats, av[:, ai[s]], col_b, src, how))
+            out.append(_value_change(name, raw(s, "B"), feats, av[:, ai[s]], col_b,
+                                     src if src and src not in bi else None, how))
             done.add(s)
 
     gone = set(disappeared)
@@ -238,7 +246,8 @@ def _value_change(name, sample, feats, col_a, col_b, src, how) -> Change:
     if na_b > na_a:
         bits.append(f"missing values rose from {na_a} to {na_b}")
     if src:
-        bits.append(f"now {how} to {src}'s previous profile, but that profile isn't unique enough to call a copy")
+        bits.append(f"now {how} to the profile {src} had before, and {src} is no longer in this file: the sample may "
+                    "have been relabelled")
     ok = ~np.isnan(col_a) & ~np.isnan(col_b) & diff
     if ok.sum() >= 3 and np.all(col_a[ok] != 0):
         ratio = np.median(col_b[ok] / col_a[ok])
