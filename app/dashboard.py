@@ -20,6 +20,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from tripwire.contract import load_changes  # noqa: E402
+from tripwire.dashboard_input import parse_findings  # noqa: E402
 from tripwire.findings import build  # noqa: E402
 from tripwire.release import Release  # noqa: E402
 from tripwire.review import DECISIONS, LABELS, apply_decisions, review_status  # noqa: E402
@@ -96,6 +97,7 @@ def verdict_badge(v: str) -> str:
 root = challenge_dir()
 st.sidebar.title("🧭 Tripwire")
 st.sidebar.caption("Cohort Control Tower · team Skill issue")
+source = st.sidebar.radio("Findings source", ["Compare releases", "Upload findings.json", "Synthetic example"])
 if root is None:
     st.sidebar.error("Challenge repo not found. Clone it next to this repo, or set TRIPWIRE_CHALLENGE_DIR.")
 default_a = str(root / "data" / "tcga-brca" / "raw") if root else ""
@@ -127,17 +129,40 @@ if not CARDS:
 with st.sidebar.expander("Advanced"):
     changes_file = st.text_input("Use a changes file instead of the detector (testing)", "")
 
-run = st.sidebar.button("Compare releases", type="primary", disabled=not (a_path and b_path), use_container_width=True)
+run = st.sidebar.button("Compare releases", type="primary", disabled=source != "Compare releases" or not (a_path and b_path), use_container_width=True)
+upload = st.sidebar.file_uploader("Upload findings.json", type=["json"]) if source == "Upload findings.json" else None
+load_example = st.sidebar.button("Load synthetic example") if source == "Synthetic example" else False
 st.sidebar.divider()
 st.sidebar.caption("Research use only. Not a diagnosis, treatment advice, risk score or clinical claim.")
+
+def set_document(document, origin, seconds=None):
+    generation = st.session_state.get("document_generation", 0) + 1
+    existing = {d["repair_id"]: {k: d[k] for k in ("decision", "reason", "reviewer_role")}
+                for d in document.get("decisions", [])}
+    st.session_state.update(doc=document, secs=seconds, decisions=existing, document_origin=origin,
+                            document_generation=generation)
+
 
 if run:
     try:
         with st.spinner("Comparing every file, mapping impact, rerunning analyses…"):
             doc, secs = compare(a_path, b_path, question, changes_file or None)
-        st.session_state.update(doc=doc, secs=secs, decisions={})
+        set_document(doc, "comparison", secs)
     except Exception as e:  # show the problem instead of a stack trace
         st.error(f"Couldn't compare these releases: {e}")
+
+if upload is not None:
+    import hashlib
+    fingerprint = hashlib.sha256(upload.getvalue()).hexdigest()
+    if fingerprint != st.session_state.get("upload_fingerprint") or st.session_state.get("document_origin") != "upload":
+        try:
+            set_document(parse_findings(upload.getvalue()), "upload")
+            st.session_state["upload_fingerprint"] = fingerprint
+        except ValueError as e:
+            st.error(f"Couldn't load findings: {e}")
+            st.stop()
+if load_example:
+    set_document(parse_findings((ROOT / "app" / "synthetic.json").read_bytes()), "synthetic")
 
 doc = st.session_state.get("doc")
 
@@ -146,9 +171,22 @@ doc = st.session_state.get("doc")
 st.title("Tripwire")
 st.markdown("**Same sample count, different data.** Tripwire tells you what changed, what it breaks, and what it "
             "can't see.")
-if doc is None:
-    st.info("Pick release B (or open an envelope) in the sidebar, then **Compare releases**.")
+if source == "Upload findings.json" and upload is None:
+    st.info("Choose a findings JSON file in the sidebar.")
     st.stop()
+if source == "Synthetic example" and st.session_state.get("document_origin") != "synthetic":
+    st.info("Select **Load synthetic example** in the sidebar.")
+    st.stop()
+if source == "Compare releases" and st.session_state.get("document_origin") not in (None, "comparison"):
+    st.info("Choose releases and select **Compare releases** in the sidebar.")
+    st.stop()
+if doc is None:
+    st.info("Compare releases, upload a findings file, or load the synthetic example from the sidebar.")
+    st.stop()
+if st.session_state.get("document_origin") == "synthetic":
+    st.warning("Synthetic demonstration data: invented results, not a real release comparison.")
+elif st.session_state.get("document_origin") == "upload":
+    st.info("Uploaded findings: displaying the supplied results; structural checks do not verify their correctness.")
 
 # ------------------------------------------------------------------ verdict first
 
@@ -159,7 +197,8 @@ with c1:
     st.markdown(f"### {verdict_badge(doc.get('verdict', ''))}")
     st.markdown(f"**{doc.get('question', '')}**")
     rel = doc["data"]["releases"]
-    st.caption(f"{rel[0]['name']} → {rel[-1]['name']} · compared in {st.session_state.get('secs', 0):.1f} s")
+    secs = st.session_state.get("secs")
+    st.caption(f"{rel[0]['name']} → {rel[-1]['name']}" + (f" · compared in {secs:.1f} s" if secs is not None else ""))
 with c2:
     m1, m2, m3 = st.columns(3)
     m1.metric("Findings", len(doc.get("findings", [])))
@@ -200,9 +239,10 @@ with tabs[0]:
                 st.caption(f"Sample by sample, what it reads: {ic['identical']} identical, {ic['added']} entered, "
                            f"{ic['removed']} left, {ic['values_changed']} changed value.")
             if a.get("before"):
-                keys = list(dict.fromkeys(list(a["before"]) + list(a.get("after", {}))))
-                rows = [{"result": k, "before": json.dumps(a["before"].get(k)), "after": json.dumps(a["after"].get(k)),
-                         "moved": "←" if a["before"].get(k) != a["after"].get(k) else ""} for k in keys]
+                after = a.get("after") or {}
+                keys = list(dict.fromkeys(list(a["before"]) + list(after)))
+                rows = [{"result": k, "before": json.dumps(a["before"].get(k)), "after": json.dumps(after.get(k)),
+                         "moved": "←" if a["before"].get(k) != after.get(k) else ""} for k in keys]
                 st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
 
 # ------------------------------------------------------------------ findings and evidence
@@ -210,7 +250,7 @@ with tabs[0]:
 with tabs[1]:
     findings = doc.get("findings", [])
     if not findings:
-        st.success("No changes found between the releases.")
+        st.info("No findings were provided. This does not prove the release is error-free.")
     sev_filter = st.multiselect("Severity", ["high", "medium", "low"], default=["high", "medium", "low"])
     for f in findings:
         if f.get("severity") not in sev_filter:
@@ -257,10 +297,11 @@ with tabs[2]:
             st.write(r["justification"])
             st.caption("Targets: " + ", ".join(t["id"] for t in r.get("targets", []))[:400])
             prev = decisions.get(r["id"], {})
-            d = st.radio("Decision", DECISIONS, format_func=LABELS.get, key=f"d_{r['id']}", horizontal=True,
+            widget_id = f"{st.session_state['document_generation']}_{r['id']}"
+            d = st.radio("Decision", DECISIONS, format_func=LABELS.get, key=f"d_{widget_id}", horizontal=True,
                          index=DECISIONS.index(prev["decision"]) if prev else None)
-            reason = st.text_input("Reason", prev.get("reason", ""), key=f"r_{r['id']}")
-            if st.button("Record decision", key=f"b_{r['id']}"):
+            reason = st.text_input("Reason", prev.get("reason", ""), key=f"r_{widget_id}")
+            if st.button("Record decision", key=f"b_{widget_id}"):
                 try:
                     trial = {**decisions, r["id"]: {"decision": d, "reason": reason, "reviewer_role": role}}
                     apply_decisions(doc, trial)
@@ -298,11 +339,14 @@ with tabs[4]:
     cols[0].download_button("Download findings.json", json.dumps(final, indent=2), f"findings-{name}.json",
                             "application/json", use_container_width=True)
     if render_report:
-        cols[1].download_button("Download HTML report", render_report(final), f"findings-{name}.html", "text/html",
-                                use_container_width=True)
+        try:
+            report = render_report(final)
+            cols[1].download_button("Download HTML report", report, f"findings-{name}.html", "text/html", use_container_width=True)
+        except (KeyError, TypeError, ValueError) as e:
+            cols[1].warning(f"HTML report unavailable for this file: {e}")
     if final.get("settings"):
         st.caption("Tolerances and minimums (prototype policy, not clinical standards)")
         st.json(final["settings"])
     for r in rel:
         st.caption(f"Release {r['name']}: file fingerprints")
-        st.dataframe(pd.DataFrame(r["files"]), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(r.get("files", [])), hide_index=True, use_container_width=True)
