@@ -21,3 +21,7 @@ findings*.json
 
 # Vercel CLI link
 .vercel/
+
+# the replay page's recorded run (findings only, no raw data)
+!site/data/
+!site/data/*.replay.json

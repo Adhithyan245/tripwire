@@ -1,0 +1,1132 @@
+{
+ "format_version": "0.2",
+ "producer": {
+  "team": "Skill issue",
+  "product": "Cohort Control Tower",
+  "track": "cohort-firewall",
+  "tool": "Tripwire 0.1.0"
+ },
+ "data": {
+  "dataset": "TCGA-BRCA",
+  "releases": [
+   {
+    "name": "raw",
+    "files": [
+     {
+      "file": "clinical.tsv",
+      "sha256": "39eb3be0fb86e6a577bd2cc01502a7fa5a271e1e1cba294e9dc644ad99580d7f"
+     },
+     {
+      "file": "copy_number_gistic.tsv.gz",
+      "sha256": "c45b1f8ea19c8dc20bd614d0863a40cccc633518d0ad05d2c7fff5f75781e980"
+     },
+     {
+      "file": "mutation_gene_level.tsv.gz",
+      "sha256": "ceaf6a01fd983cefc7fca8b52f6c65121acc87b75f4d170b9fcdc07ee16a3813"
+     },
+     {
+      "file": "protein_rppa.tsv.gz",
+      "sha256": "7823a7a375495f7e5f114d0c7ec8773e070cb9ac409785f98045d12ab71195e6"
+     },
+     {
+      "file": "survival.tsv",
+      "sha256": "6c9e18ae9c2b8bacc48cd5a60cde97e8880ae2e84e48df437a0378b17e659b73"
+     }
+    ]
+   },
+   {
+    "name": "practice",
+    "files": [
+     {
+      "file": "clinical.tsv",
+      "sha256": "39eb3be0fb86e6a577bd2cc01502a7fa5a271e1e1cba294e9dc644ad99580d7f",
+      "hash_of": "content"
+     },
+     {
+      "file": "copy_number_gistic.tsv.gz",
+      "sha256": "057090755b3877806148c7e520cb397850bba18ee223a312b4ccd62d0ee84705",
+      "hash_of": "content"
+     },
+     {
+      "file": "mutation_gene_level.tsv.gz",
+      "sha256": "8f7b02f47a4087aeffae11896dc8537b2b20e3d8bb85594dd77a6ce80828dd99",
+      "hash_of": "content"
+     },
+     {
+      "file": "protein_rppa.tsv.gz",
+      "sha256": "e5ee5f77c9a5dfb3c6ea90d84a47db2866543d3dcaebc5093efb691b8847da5f",
+      "hash_of": "content"
+     },
+     {
+      "file": "survival.tsv",
+      "sha256": "6c9e18ae9c2b8bacc48cd5a60cde97e8880ae2e84e48df437a0378b17e659b73",
+      "hash_of": "content"
+     }
+    ]
+   }
+  ]
+ },
+ "question": "Did release practice change anything that affects analyses A1 (ER-alpha protein by clinical ER status) and A2 (RNA subtype mix of primary tumors)?",
+ "verdict": "Conditional",
+ "findings": [
+  {
+   "id": "F1",
+   "kind": "sample_swap",
+   "summary": "Profiles of TCGA-A8-A09K-01 and TCGA-B6-A0WX-01 in protein_rppa.tsv.gz appear exchanged between releases. Affected samples by release-A labels: subtype: 1 Basal, 1 LumA; ER: 1 Negative, 1 Positive.",
+   "severity": "high",
+   "confidence": "high",
+   "evidence": [
+    {
+     "kind": "sample",
+     "id": "TCGA-A8-A09K-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "note": "profile is identical to TCGA-B6-A0WX-01's in the previous release, and TCGA-B6-A0WX-01 now carries this sample's old profile",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.252549812871880097372040409338754599918/series/1.3.6.1.4.1.5962.99.1.1353496534.594267531.1637736069078.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-B6-A0WX-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.313876930275437405700886098015749945827/series/1.3.6.1.4.1.5962.99.1.1311646388.1333858778.1637694218932.2.0"
+    }
+   ],
+   "affects_analyses": [
+    "A1"
+   ],
+   "not_affected_analyses": [
+    "A2"
+   ],
+   "limitation": "A swap is inferred from two profiles trading places between releases; the release doesn't say why.",
+   "needs_human_review": true,
+   "relevant_questions": [
+    "er_protein_by_er_status",
+    "predict_er_from_protein"
+   ],
+   "severity_reason": "It feeds results that are Blocked overall: predict_er_from_protein."
+  },
+  {
+   "id": "F2",
+   "kind": "duplicate",
+   "summary": "5 sample(s) in protein_rppa.tsv.gz carry profiles identical or near-identical to other samples. By release-A labels: copied from samples labelled subtype: 5 LumA; ER: 3 Positive; the copies sit under IDs labelled subtype: 1 LumA; ER: 5 Positive. Samples: TCGA-E2-A106-01, TCGA-E2-A9RU-01, TCGA-GM-A5PX-01, TCGA-LL-A5YN-01, TCGA-LL-A73Z-01.",
+   "severity": "high",
+   "confidence": "high",
+   "evidence": [
+    {
+     "kind": "sample",
+     "id": "TCGA-E2-A106-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "note": "new sample whose profile is identical to TCGA-C8-A133-01's",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.156462727662242463570263954304398911015/series/1.3.6.1.4.1.5962.99.1.1338697006.1659179427.1637721269550.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E2-A9RU-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "note": "new sample whose profile is identical to TCGA-EW-A1PE-01's",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.185517692799253907464673670373470935680/series/1.3.6.1.4.1.5962.99.1.1282744761.167024508.1637665317305.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-GM-A5PX-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "note": "new sample whose profile is identical to TCGA-E9-A2JT-01's",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.138352957907291032922349414701105865432/series/1.3.6.1.4.1.5962.99.1.1224917243.108043713.1637607489787.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-LL-A5YN-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "note": "new sample whose profile is identical to TCGA-AR-A1AP-01's",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.255042113796865575903037420525376492748/series/1.3.6.1.4.1.5962.99.1.1356667172.1323411464.1637739239716.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-LL-A73Z-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "note": "new sample whose profile is identical to TCGA-E9-A1N3-01's",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.190293684969401341226650875587219211605/series/1.3.6.1.4.1.5962.99.1.1264402216.1818922269.1637646974760.2.0"
+    }
+   ],
+   "affects_analyses": [
+    "A1"
+   ],
+   "not_affected_analyses": [
+    "A2"
+   ],
+   "limitation": "Identical or near-identical profiles strongly suggest copies, not new measurements.",
+   "needs_human_review": true,
+   "relevant_questions": [
+    "er_protein_by_er_status",
+    "predict_er_from_protein"
+   ],
+   "severity_reason": "It feeds results that are Blocked overall: predict_er_from_protein."
+  },
+  {
+   "id": "F3",
+   "kind": "membership_change",
+   "summary": "5 sample(s) lost their data in protein_rppa.tsv.gz. Affected samples by release-A labels: subtype: 5 Her2; ER: 3 Negative, 1 Positive. All 5 are Her2, a subtype that is 7.0% of labelled samples in release A; by chance that would happen about 1 time in 591,446, so this change hit one subgroup. Questions that count or compare subtypes are hit hardest. The total sample count in protein_rppa.tsv.gz is unchanged (747), so a count check would miss this. Samples: TCGA-A8-A08J-01, TCGA-C8-A12Q-01, TCGA-C8-A26Y-01, TCGA-E9-A1RH-01, TCGA-GM-A2DH-01.",
+   "severity": "high",
+   "confidence": "high",
+   "evidence": [
+    {
+     "kind": "sample",
+     "id": "TCGA-A8-A08J-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "note": "in the previous release's protein_rppa.tsv.gz, not in the new one",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.160356141536762567411934440138267652392/series/1.3.6.1.4.1.5962.99.1.1227461506.2051136567.1637610034050.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-C8-A12Q-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "note": "in the previous release's protein_rppa.tsv.gz, not in the new one",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.111519630131109567253093952836190210346/series/1.3.6.1.4.1.5962.99.1.1274001629.1927287955.1637656574173.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-C8-A26Y-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "note": "in the previous release's protein_rppa.tsv.gz, not in the new one",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.17876444256610672132165217759199783038/series/1.3.6.1.4.1.5962.99.1.1334383318.1870326780.1637716955862.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E9-A1RH-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "note": "in the previous release's protein_rppa.tsv.gz, not in the new one",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.98613071121101792379645652514646041048/series/1.3.6.1.4.1.5962.99.1.1257533942.54245673.1637640106486.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-GM-A2DH-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "note": "in the previous release's protein_rppa.tsv.gz, not in the new one",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.315136918630184046577686583932213036958/series/1.3.6.1.4.1.5962.99.1.1349876138.620687926.1637732448682.2.0"
+    }
+   ],
+   "affects_analyses": [
+    "A1"
+   ],
+   "not_affected_analyses": [
+    "A2"
+   ],
+   "limitation": "A dropped sample may be a deliberate withdrawal; ask the data provider.",
+   "needs_human_review": true,
+   "relevant_questions": [
+    "er_protein_by_er_status",
+    "predict_er_from_protein"
+   ],
+   "severity_reason": "It feeds results that are Blocked overall: predict_er_from_protein."
+  }
+ ],
+ "analyses": [
+  {
+   "id": "A1",
+   "status": "changed",
+   "title": "ER-alpha protein by clinical ER status",
+   "verdict": "Conditional",
+   "why": "Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%)).",
+   "impact": "12 of 12 detected changes touch what A1 reads (clinical.tsv, protein_rppa.tsv.gz; cohort: primary tumors (code 01) with protein data and clinical ER status Positive or Negative).",
+   "inputs": [
+    "clinical.tsv",
+    "protein_rppa.tsv.gz"
+   ],
+   "cohort": "primary tumors (code 01) with protein data and clinical ER status Positive or Negative",
+   "before": {
+    "n_samples": 698,
+    "n_positive": 529,
+    "n_negative": 169,
+    "mean_positive": 2.179,
+    "mean_negative": -0.872,
+    "difference": 3.051
+   },
+   "after": {
+    "n_samples": 699,
+    "n_positive": 533,
+    "n_negative": 166,
+    "mean_positive": 2.176,
+    "mean_negative": -0.843,
+    "difference": 3.019
+   },
+   "rerun_reason": "affected by detected changes",
+   "input_changes": {
+    "added": 5,
+    "removed": 4,
+    "values_changed": 2,
+    "identical": 692
+   }
+  },
+  {
+   "id": "A2",
+   "status": "unchanged",
+   "title": "RNA subtype mix of primary tumors",
+   "verdict": "Ready",
+   "why": "Nothing this analysis uses changed: the 844 samples it reads are identical in both releases; a check rerun confirms it (largest subtype share shift 0.0 pp (tolerance 1.0 pp)).",
+   "impact": "None of the 12 detected changes touch A2: 12 in a file it doesn't read (protein_rppa.tsv.gz).",
+   "inputs": [
+    "clinical.tsv"
+   ],
+   "cohort": "primary tumors (code 01) in clinical.tsv with a PAM50 RNA-seq call",
+   "before": {
+    "n_samples": 844,
+    "counts": {
+     "Basal": 141,
+     "Her2": 67,
+     "LumA": 421,
+     "LumB": 192,
+     "Normal": 23
+    },
+    "percent": {
+     "Basal": 16.7,
+     "Her2": 7.9,
+     "LumA": 49.9,
+     "LumB": 22.7,
+     "Normal": 2.7
+    }
+   },
+   "after": {
+    "n_samples": 844,
+    "counts": {
+     "Basal": 141,
+     "Her2": 67,
+     "LumA": 421,
+     "LumB": 192,
+     "Normal": 23
+    },
+    "percent": {
+     "Basal": 16.7,
+     "Her2": 7.9,
+     "LumA": 49.9,
+     "LumB": 22.7,
+     "Normal": 2.7
+    }
+   },
+   "rerun_reason": "verification rerun: the impact map said unaffected",
+   "input_changes": {
+    "added": 0,
+    "removed": 0,
+    "values_changed": 0,
+    "identical": 844
+   }
+  }
+ ],
+ "repairs": [
+  {
+   "id": "R1",
+   "action": "restore_from_previous_release",
+   "targets": [
+    {
+     "kind": "sample",
+     "id": "TCGA-A8-A09K-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.252549812871880097372040409338754599918/series/1.3.6.1.4.1.5962.99.1.1353496534.594267531.1637736069078.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-B6-A0WX-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.313876930275437405700886098015749945827/series/1.3.6.1.4.1.5962.99.1.1311646388.1333858778.1637694218932.2.0"
+    }
+   ],
+   "justification": "Restore both profiles as they were in raw until the swap is explained. Proposed only; never applied automatically.",
+   "addresses": [
+    "F1"
+   ],
+   "preview": {
+    "analyses": [
+     {
+      "analysis": "A1",
+      "now": {
+       "n_samples": 699,
+       "n_positive": 533,
+       "n_negative": 166,
+       "mean_positive": 2.176,
+       "mean_negative": -0.843,
+       "difference": 3.019
+      },
+      "if_approved": {
+       "n_samples": 699,
+       "n_positive": 533,
+       "n_negative": 166,
+       "mean_positive": 2.184,
+       "mean_negative": -0.87,
+       "difference": 3.054
+      },
+      "verdict_now": "Conditional",
+      "verdict_if_approved": "Conditional",
+      "summary": "A1: now difference 3.051 -> 3.019 (1.0% relative; tolerance 5%); if approved difference 3.051 -> 3.054 (0.1% relative; tolerance 5%), vs release raw."
+     }
+    ],
+    "note": "This repair on its own, on a copy of the new release; other changes stay. Nothing is applied."
+   }
+  },
+  {
+   "id": "R2",
+   "action": "exclude",
+   "targets": [
+    {
+     "kind": "sample",
+     "id": "TCGA-E2-A106-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.156462727662242463570263954304398911015/series/1.3.6.1.4.1.5962.99.1.1338697006.1659179427.1637721269550.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E2-A9RU-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.185517692799253907464673670373470935680/series/1.3.6.1.4.1.5962.99.1.1282744761.167024508.1637665317305.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-GM-A5PX-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.138352957907291032922349414701105865432/series/1.3.6.1.4.1.5962.99.1.1224917243.108043713.1637607489787.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-LL-A5YN-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.255042113796865575903037420525376492748/series/1.3.6.1.4.1.5962.99.1.1356667172.1323411464.1637739239716.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-LL-A73Z-01",
+     "release": "practice",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.190293684969401341226650875587219211605/series/1.3.6.1.4.1.5962.99.1.1264402216.1818922269.1637646974760.2.0"
+    }
+   ],
+   "justification": "Exclude the duplicated profiles from analyses that read protein_rppa.tsv.gz. Proposed only; never applied automatically.",
+   "addresses": [
+    "F2"
+   ],
+   "preview": {
+    "analyses": [
+     {
+      "analysis": "A1",
+      "now": {
+       "n_samples": 699,
+       "n_positive": 533,
+       "n_negative": 166,
+       "mean_positive": 2.176,
+       "mean_negative": -0.843,
+       "difference": 3.019
+      },
+      "if_approved": {
+       "n_samples": 694,
+       "n_positive": 528,
+       "n_negative": 166,
+       "mean_positive": 2.172,
+       "mean_negative": -0.843,
+       "difference": 3.015
+      },
+      "verdict_now": "Conditional",
+      "verdict_if_approved": "Conditional",
+      "summary": "A1: now difference 3.051 -> 3.019 (1.0% relative; tolerance 5%); if approved difference 3.051 -> 3.015 (1.2% relative; tolerance 5%), vs release raw."
+     }
+    ],
+    "note": "This repair on its own, on a copy of the new release; other changes stay. Nothing is applied."
+   }
+  },
+  {
+   "id": "R3",
+   "action": "flag_for_review",
+   "targets": [
+    {
+     "kind": "sample",
+     "id": "TCGA-A8-A08J-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.160356141536762567411934440138267652392/series/1.3.6.1.4.1.5962.99.1.1227461506.2051136567.1637610034050.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-C8-A12Q-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.111519630131109567253093952836190210346/series/1.3.6.1.4.1.5962.99.1.1274001629.1927287955.1637656574173.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-C8-A26Y-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.17876444256610672132165217759199783038/series/1.3.6.1.4.1.5962.99.1.1334383318.1870326780.1637716955862.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E9-A1RH-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.98613071121101792379645652514646041048/series/1.3.6.1.4.1.5962.99.1.1257533942.54245673.1637640106486.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-GM-A2DH-01",
+     "release": "raw",
+     "file": "protein_rppa.tsv.gz",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.315136918630184046577686583932213036958/series/1.3.6.1.4.1.5962.99.1.1349876138.620687926.1637732448682.2.0"
+    }
+   ],
+   "justification": "Ask the data provider why these samples lost data in protein_rppa.tsv.gz. Proposed only; never applied automatically.",
+   "addresses": [
+    "F3"
+   ],
+   "preview": {
+    "note": "Nothing to compute: this repair asks a person to check something first."
+   }
+  }
+ ],
+ "questions": [
+  {
+   "id": "er_protein_by_er_status",
+   "title": "Does ER-alpha protein differ between ER-positive and ER-negative tumors?",
+   "intended_use": "descriptive",
+   "cohort": "primary tumors (code 01) with data in protein_rppa.tsv.gz, labelled Positive / Negative in breast_carcinoma_estrogen_receptor_status",
+   "inputs": [
+    "clinical.tsv",
+    "protein_rppa.tsv.gz"
+   ],
+   "label": "breast_carcinoma_estrogen_receptor_status",
+   "acceptable_limitations": "Group means can shift slightly; a small move within tolerance is acceptable.",
+   "required_checks": [
+    "sample_size"
+   ],
+   "problems": [],
+   "verdict": "Conditional",
+   "why": "Computed by A1: Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%)).",
+   "release_part": {
+    "verdict": "Conditional",
+    "why": "Computed by A1: Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%))."
+   },
+   "checks": [
+    {
+     "name": "sample_size",
+     "status": "pass",
+     "summary": "at least 20 labelled samples per class (Positive: 533, Negative: 166)"
+    }
+   ],
+   "coverage": {
+    "pass": [
+     "sample_size"
+    ],
+    "fixable": [],
+    "insufficient": [],
+    "fail": [],
+    "skipped": [],
+    "unavailable": [],
+    "missing": []
+   },
+   "relevant_findings": [
+    "F1",
+    "F2",
+    "F3"
+   ]
+  },
+  {
+   "id": "subtype_mix",
+   "title": "What is the PAM50 subtype mix of primary tumors?",
+   "intended_use": "descriptive",
+   "cohort": "primary tumors (code 01), labelled Basal / Her2 / LumA / LumB / Normal in PAM50Call_RNAseq",
+   "inputs": [
+    "clinical.tsv"
+   ],
+   "label": "PAM50Call_RNAseq",
+   "acceptable_limitations": "Shares can shift slightly; a small move within tolerance is acceptable.",
+   "required_checks": [
+    "sample_size"
+   ],
+   "problems": [],
+   "verdict": "Ready",
+   "why": "Computed by A2: Nothing this analysis uses changed: the 844 samples it reads are identical in both releases; a check rerun confirms it (largest subtype share shift 0.0 pp (tolerance 1.0 pp)).",
+   "release_part": {
+    "verdict": "Ready",
+    "why": "Computed by A2: Nothing this analysis uses changed: the 844 samples it reads are identical in both releases; a check rerun confirms it (largest subtype share shift 0.0 pp (tolerance 1.0 pp))."
+   },
+   "checks": [
+    {
+     "name": "sample_size",
+     "status": "pass",
+     "summary": "at least 20 labelled samples per class (Basal: 141, Her2: 67, LumA: 421, LumB: 192, Normal: 23)"
+    }
+   ],
+   "coverage": {
+    "pass": [
+     "sample_size"
+    ],
+    "fixable": [],
+    "insufficient": [],
+    "fail": [],
+    "skipped": [],
+    "unavailable": [],
+    "missing": []
+   },
+   "relevant_findings": []
+  },
+  {
+   "id": "os_by_subtype",
+   "title": "Does overall survival differ between PAM50 subtypes?",
+   "intended_use": "descriptive",
+   "cohort": "primary tumors (code 01) with data in survival.tsv, labelled Basal / Her2 / LumA / LumB in PAM50Call_RNAseq",
+   "inputs": [
+    "clinical.tsv",
+    "survival.tsv"
+   ],
+   "label": "PAM50Call_RNAseq",
+   "acceptable_limitations": "Normal-like tumors are left out (too few). Follow-up is short, so only early survival differences can be judged.",
+   "required_checks": [
+    "sample_size",
+    "event_count"
+   ],
+   "problems": [],
+   "verdict": "Ready",
+   "why": "Nothing this question reads changed between releases.",
+   "release_part": {
+    "verdict": "Ready",
+    "why": "Nothing this question reads changed between releases."
+   },
+   "checks": [
+    {
+     "name": "sample_size",
+     "status": "pass",
+     "summary": "at least 20 labelled samples per class (Basal: 140, Her2: 67, LumA: 420, LumB: 192)"
+    },
+    {
+     "name": "event_count",
+     "status": "pass",
+     "summary": "at least 10 OS events per group (Basal: 19 events of 140, median follow-up 32.8 mo, Her2: 14 events of 67, median follow-up 21.8 mo, LumA: 55 events of 420, median follow-up 32.9 mo, LumB: 32 events of 192, median follow-up 26.9 mo); 2 redacted row(s) flagged for a person",
+     "evidence": [
+      {
+       "kind": "row",
+       "id": "subtype Basal",
+       "note": "19 OS events, n=140"
+      },
+      {
+       "kind": "row",
+       "id": "subtype Her2",
+       "note": "14 OS events, n=67"
+      },
+      {
+       "kind": "row",
+       "id": "subtype LumA",
+       "note": "55 OS events, n=420"
+      },
+      {
+       "kind": "row",
+       "id": "subtype LumB",
+       "note": "32 OS events, n=192"
+      },
+      {
+       "kind": "file",
+       "id": "survival.tsv",
+       "note": "2 row(s) marked Redaction = Redacted but kept, as the organizers advise; check them"
+      }
+     ]
+    }
+   ],
+   "coverage": {
+    "pass": [
+     "sample_size",
+     "event_count"
+    ],
+    "fixable": [],
+    "insufficient": [],
+    "fail": [],
+    "skipped": [],
+    "unavailable": [],
+    "missing": []
+   },
+   "relevant_findings": []
+  },
+  {
+   "id": "predict_er_from_protein",
+   "title": "Train a research model to predict ER status from protein (RPPA).",
+   "intended_use": "model_training",
+   "cohort": "primary tumors (code 01) with data in protein_rppa.tsv.gz, labelled Positive / Negative in breast_carcinoma_estrogen_receptor_status",
+   "inputs": [
+    "clinical.tsv",
+    "protein_rppa.tsv.gz"
+   ],
+   "label": "breast_carcinoma_estrogen_receptor_status",
+   "acceptable_limitations": "None for label or profile integrity: every training sample must carry its own data.",
+   "required_checks": [
+    "sample_size",
+    "patient_leakage",
+    "site_confounding"
+   ],
+   "problems": [],
+   "verdict": "Blocked",
+   "why": "12 detected change(s) touch this question's inputs, including duplicate, swap. For model training that means wrong labels or copies across a train/test split; a curator must review them first.",
+   "release_part": {
+    "verdict": "Blocked",
+    "why": "12 detected change(s) touch this question's inputs, including duplicate, swap. For model training that means wrong labels or copies across a train/test split; a curator must review them first."
+   },
+   "checks": [
+    {
+     "name": "sample_size",
+     "status": "pass",
+     "summary": "at least 20 labelled samples per class (Positive: 533, Negative: 166)"
+    },
+    {
+     "name": "patient_leakage",
+     "status": "fixable",
+     "summary": "6 samples share 3 identical profile(s) (of 699). Potential leakage, not demonstrated: it depends on how you split",
+     "evidence": [
+      {
+       "kind": "sample",
+       "id": "TCGA-AR-A1AP-01",
+       "release": "practice",
+       "note": "identical profile to TCGA-LL-A5YN-01"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-C8-A133-01",
+       "release": "practice",
+       "note": "identical profile to TCGA-E2-A106-01"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-EW-A1PE-01",
+       "release": "practice",
+       "note": "identical profile to TCGA-E2-A9RU-01"
+      }
+     ],
+     "fix": "split by patient_id, and remove copied profiles before splitting"
+    },
+    {
+     "name": "site_confounding",
+     "status": "fixable",
+     "summary": "label vs tissue source site: Cramer's V = 0.19 over 16 site groups (699 samples; sites under 10 pooled). Assumes the barcode's site code marks the submitting hospital; between 0.1 and 0.5, a model could partly learn the site",
+     "evidence": [
+      {
+       "kind": "row",
+       "id": "site BH",
+       "note": "107 samples; Negative 16%, Positive 84%"
+      },
+      {
+       "kind": "row",
+       "id": "site A2",
+       "note": "85 samples; Negative 28%, Positive 72%"
+      },
+      {
+       "kind": "row",
+       "id": "site D8",
+       "note": "71 samples; Negative 23%, Positive 77%"
+      }
+     ],
+     "fix": "evaluate with whole sites held out, and report performance per site"
+    }
+   ],
+   "coverage": {
+    "pass": [
+     "sample_size"
+    ],
+    "fixable": [
+     "patient_leakage",
+     "site_confounding"
+    ],
+    "insufficient": [],
+    "fail": [],
+    "skipped": [],
+    "unavailable": [],
+    "missing": []
+   },
+   "relevant_findings": [
+    "F1",
+    "F2",
+    "F3"
+   ]
+  },
+  {
+   "id": "predict_subtype_from_copy_number",
+   "title": "Train a research model to predict PAM50 subtype from copy number.",
+   "intended_use": "model_training",
+   "cohort": "primary tumors (code 01) with data in copy_number_gistic.tsv.gz, labelled Basal / Her2 / LumA / LumB / Normal in PAM50Call_RNAseq",
+   "inputs": [
+    "clinical.tsv",
+    "copy_number_gistic.tsv.gz"
+   ],
+   "label": "PAM50Call_RNAseq",
+   "acceptable_limitations": "None for label or profile integrity.",
+   "required_checks": [
+    "sample_size",
+    "patient_leakage",
+    "site_confounding"
+   ],
+   "problems": [],
+   "verdict": "Conditional",
+   "why": "site_confounding: label vs tissue source site: Cramer's V = 0.19 over 17 site groups (831 samples; sites under 10 pooled). Assumes the barcode's site code marks the submitting hospital; between 0.1 and 0.5, a model could partly learn the site",
+   "release_part": {
+    "verdict": "Ready",
+    "why": "Nothing this question reads changed between releases."
+   },
+   "checks": [
+    {
+     "name": "sample_size",
+     "status": "pass",
+     "summary": "at least 20 labelled samples per class (Basal: 135, Her2: 67, LumA: 415, LumB: 192, Normal: 22)"
+    },
+    {
+     "name": "patient_leakage",
+     "status": "pass",
+     "summary": "none of the 831 labelled samples shares a patient or a profile with another, so a random split can't put one patient on both sides"
+    },
+    {
+     "name": "site_confounding",
+     "status": "fixable",
+     "summary": "label vs tissue source site: Cramer's V = 0.19 over 17 site groups (831 samples; sites under 10 pooled). Assumes the barcode's site code marks the submitting hospital; between 0.1 and 0.5, a model could partly learn the site",
+     "evidence": [
+      {
+       "kind": "row",
+       "id": "site BH",
+       "note": "132 samples; Basal 13%, Her2 6%, LumA 61%, LumB 18%, Normal 2%"
+      },
+      {
+       "kind": "row",
+       "id": "site A2",
+       "note": "80 samples; Basal 20%, Her2 8%, LumA 46%, LumB 21%, Normal 5%"
+      },
+      {
+       "kind": "row",
+       "id": "site A8",
+       "note": "79 samples; Basal 5%, Her2 11%, LumA 43%, LumB 39%, Normal 1%"
+      }
+     ],
+     "fix": "evaluate with whole sites held out, and report performance per site"
+    }
+   ],
+   "coverage": {
+    "pass": [
+     "sample_size",
+     "patient_leakage"
+    ],
+    "fixable": [
+     "site_confounding"
+    ],
+    "insufficient": [],
+    "fail": [],
+    "skipped": [],
+    "unavailable": [],
+    "missing": []
+   },
+   "relevant_findings": []
+  },
+  {
+   "id": "predict_er_from_rna",
+   "title": "Train a research model to predict ER status from RNA expression.",
+   "intended_use": "model_training",
+   "cohort": "primary tumors (code 01) with data in rna_hiseq.tsv.gz, labelled Positive / Negative in breast_carcinoma_estrogen_receptor_status",
+   "inputs": [
+    "clinical.tsv",
+    "rna_hiseq.tsv.gz"
+   ],
+   "label": "breast_carcinoma_estrogen_receptor_status",
+   "acceptable_limitations": "None for label or profile integrity.",
+   "required_checks": [
+    "sample_size",
+    "patient_leakage",
+    "site_confounding"
+   ],
+   "problems": [
+    {
+     "kind": "unavailable",
+     "text": "rna_hiseq.tsv.gz is not in release practice"
+    }
+   ],
+   "verdict": "Insufficient Evidence",
+   "why": "This data can't answer the question: rna_hiseq.tsv.gz is not in release practice.",
+   "release_part": {
+    "verdict": "Insufficient Evidence",
+    "why": "inputs missing"
+   },
+   "checks": [
+    {
+     "name": "sample_size",
+     "status": "unavailable",
+     "summary": "inputs missing"
+    },
+    {
+     "name": "patient_leakage",
+     "status": "unavailable",
+     "summary": "inputs missing"
+    },
+    {
+     "name": "site_confounding",
+     "status": "unavailable",
+     "summary": "inputs missing"
+    }
+   ],
+   "coverage": {
+    "pass": [],
+    "fixable": [],
+    "insufficient": [],
+    "fail": [],
+    "skipped": [],
+    "unavailable": [
+     "sample_size",
+     "patient_leakage",
+     "site_confounding"
+    ],
+    "missing": []
+   },
+   "relevant_findings": []
+  },
+  {
+   "id": "predict_subtype_from_rna",
+   "title": "Train a research model to predict PAM50 subtype from RNA expression.",
+   "intended_use": "model_training",
+   "cohort": "primary tumors (code 01) with data in rna_hiseq.tsv.gz, labelled Basal / Her2 / LumA / LumB / Normal in PAM50Call_RNAseq",
+   "inputs": [
+    "clinical.tsv",
+    "rna_hiseq.tsv.gz"
+   ],
+   "label": "PAM50Call_RNAseq",
+   "acceptable_limitations": "None for label or profile integrity.",
+   "required_checks": [
+    "sample_size",
+    "patient_leakage",
+    "site_confounding"
+   ],
+   "problems": [],
+   "verdict": "Blocked",
+   "why": "Circular question: the label PAM50Call_RNAseq was computed from rna_hiseq.tsv.gz, the same data this model would use as input, so it would mostly re-learn the labelling algorithm. Choose inputs the label wasn't computed from (for example copy number or protein), or a label that wasn't derived from RNA.",
+   "release_part": {
+    "verdict": "Blocked",
+    "why": "circular question"
+   },
+   "checks": [
+    {
+     "name": "label_circularity",
+     "status": "fail",
+     "summary": "the label PAM50Call_RNAseq was computed from rna_hiseq.tsv.gz, the same data this model would use as input, so it would mostly re-learn the labelling algorithm"
+    },
+    {
+     "name": "sample_size",
+     "status": "skipped",
+     "summary": "not needed: the question is circular"
+    },
+    {
+     "name": "patient_leakage",
+     "status": "skipped",
+     "summary": "not needed: the question is circular"
+    },
+    {
+     "name": "site_confounding",
+     "status": "skipped",
+     "summary": "not needed: the question is circular"
+    }
+   ],
+   "coverage": {
+    "pass": [],
+    "fixable": [],
+    "insufficient": [],
+    "fail": [
+     "label_circularity"
+    ],
+    "skipped": [
+     "sample_size",
+     "patient_leakage",
+     "site_confounding"
+    ],
+    "unavailable": [],
+    "missing": []
+   },
+   "relevant_findings": []
+  }
+ ],
+ "repair_preview_all": {
+  "repairs": [
+   "R1",
+   "R2"
+  ],
+  "analyses": [
+   {
+    "analysis": "A1",
+    "if_approved": {
+     "n_samples": 694,
+     "n_positive": 528,
+     "n_negative": 166,
+     "mean_positive": 2.181,
+     "mean_negative": -0.87,
+     "difference": 3.051
+    },
+    "verdict_if_approved": "Conditional",
+    "summary": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) vs release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.",
+    "why_not_ready": "the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest."
+   },
+   {
+    "analysis": "A2",
+    "if_approved": {
+     "n_samples": 844,
+     "counts": {
+      "Basal": 141,
+      "Her2": 67,
+      "LumA": 421,
+      "LumB": 192,
+      "Normal": 23
+     },
+     "percent": {
+      "Basal": 16.7,
+      "Her2": 7.9,
+      "LumA": 49.9,
+      "LumB": 22.7,
+      "Normal": 2.7
+     }
+    },
+    "verdict_if_approved": "Ready",
+    "summary": "A2: largest subtype share shift 0.0 pp (tolerance 1.0 pp) vs release raw."
+   }
+  ],
+  "note": "All of these repairs approved together, on a copy of the new release; nothing is applied. Repairs that only ask for a check (flag_for_review) can't be previewed."
+ },
+ "settings": {
+  "A1_difference_rel_tolerance": 0.05,
+  "A2_percent_pp_tolerance": 1.0,
+  "min_samples_per_group": 20,
+  "site_confounding_v_pass": 0.1,
+  "site_confounding_v_fail": 0.5,
+  "site_min_samples": 10,
+  "min_events_per_group": 10,
+  "verify_unaffected": true
+ },
+ "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
+ "next_steps": {
+  "steps": [
+   {
+    "who": "Curator",
+    "action": "Approve or reject restoring 2 sample(s) (TCGA-A8-A09K-01, TCGA-B6-A0WX-01)",
+    "why": "Profiles of TCGA-A8-A09K-01 and TCGA-B6-A0WX-01 in protein_rppa.tsv.gz appear exchanged between releases",
+    "effect": "A1: difference 3.051 -> 3.054 (0.1% relative; tolerance 5%)",
+    "refs": [
+     "R1",
+     "F1"
+    ],
+    "step": 1
+   },
+   {
+    "who": "Curator",
+    "action": "Approve or reject excluding 5 sample(s) (TCGA-E2-A106-01, TCGA-E2-A9RU-01, TCGA-GM-A5PX-01\u2026)",
+    "why": "5 sample(s) in protein_rppa.tsv.gz carry profiles identical or near-identical to other samples",
+    "effect": "A1: difference 3.051 -> 3.015 (1.2% relative; tolerance 5%)",
+    "refs": [
+     "R2",
+     "F2"
+    ],
+    "step": 2
+   },
+   {
+    "who": "Data provider",
+    "action": "Ask the data provider to explain: 5 sample(s) lost their data in protein_rppa.tsv.gz",
+    "why": "Until it's explained, A1 can be used with care (Conditional), but don't build new work on these samples.",
+    "effect": null,
+    "refs": [
+     "R3",
+     "F3"
+    ],
+    "step": 3
+   },
+   {
+    "who": "Researcher",
+    "action": "Hold: Train a research model to predict ER status from protein (RPPA).",
+    "why": "12 detected change(s) touch this question's inputs, including duplicate, swap. For model training that means wrong labels or copies across a train/test split; a curator must review them first.",
+    "effect": "split by patient_id, and remove copied profiles before splitting; evaluate with whole sites held out, and report performance per site",
+    "refs": [
+     "predict_er_from_protein"
+    ],
+    "step": 4
+   },
+   {
+    "who": "Researcher",
+    "action": "Hold: Train a research model to predict PAM50 subtype from RNA expression.",
+    "why": "Circular question: the label PAM50Call_RNAseq was computed from rna_hiseq.tsv.gz, the same data this model would use as input, so it would mostly re-learn the labelling algorithm. Choose inputs the label wasn't computed from (for example copy number or protein), or a label that wasn't derived from RNA.",
+    "effect": null,
+    "refs": [
+     "predict_subtype_from_rna"
+    ],
+    "step": 5
+   },
+   {
+    "who": "Researcher",
+    "action": "Before: Train a research model to predict PAM50 subtype from copy number. evaluate with whole sites held out, and report performance per site",
+    "why": "site_confounding: label vs tissue source site: Cramer's V = 0.19 over 17 site groups (831 samples; sites under 10 pooled). Assumes the barcode's site code marks the submitting hospital; between 0.1 and 0.5, a model could partly learn the site",
+    "effect": null,
+    "refs": [
+     "predict_subtype_from_copy_number"
+    ],
+    "step": 6
+   },
+   {
+    "who": "Researcher",
+    "action": "Don't use this release for: Train a research model to predict ER status from RNA expression.",
+    "why": "This data can't answer the question: rna_hiseq.tsv.gz is not in release practice.",
+    "effect": null,
+    "refs": [
+     "predict_er_from_rna"
+    ],
+    "step": 7
+   }
+  ],
+  "all_repairs_together": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) against release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.; A2: largest subtype share shift 0.0 pp (tolerance 1.0 pp) against release raw.",
+  "cannot_tell": [
+   "Why a change happened. Tripwire sees that profiles moved or were copied, not the cause; the data provider has to say.",
+   "Errors already present in release A. A comparison only sees what differs between the two releases.",
+   "Which of two conflicting values is correct (a relabel shows the old and the new value, not the truth)."
+  ]
+ },
+ "replay": {
+  "files": [
+   {
+    "file": "clinical.tsv",
+    "n_a": 1247,
+    "n_b": 1247,
+    "in_b": true
+   },
+   {
+    "file": "copy_number_gistic.tsv.gz",
+    "n_a": 1080,
+    "n_b": 1080,
+    "in_b": true
+   },
+   {
+    "file": "mutation_gene_level.tsv.gz",
+    "n_a": 791,
+    "n_b": 791,
+    "in_b": true
+   },
+   {
+    "file": "protein_rppa.tsv.gz",
+    "n_a": 747,
+    "n_b": 747,
+    "in_b": true
+   },
+   {
+    "file": "survival.tsv",
+    "n_a": 1236,
+    "n_b": 1236,
+    "in_b": true
+   }
+  ],
+  "seconds": 4.1,
+  "generated_by": "scripts/build_replay.py",
+  "release_a": "raw",
+  "release_b": "practice"
+ }
+}
