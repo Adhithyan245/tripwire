@@ -8,7 +8,8 @@ Finds what changed between two releases, file by file, without being told what t
       sample-type code changes
 
 Conservative by design: a profile that several samples already share in release A carries no identity, so matching
-it is never called a swap or a copy. Files present in only one release are not compared (envelopes ship without RNA).
+it is never called a swap or a copy. A file missing from the new release is a finding, except the RNA file that
+envelopes leave out by design.
 """
 from __future__ import annotations
 
@@ -26,8 +27,14 @@ CONTINUOUS_MIN_UNIQUE = 50  # a file is "continuous" if a typical sample has at 
 MAX_FIELDS = 200            # cap on fields listed for one change
 
 
+# Envelope releases leave this file out by design; its absence is not a finding.
+EXPECTED_ABSENT = {"rna_hiseq.tsv.gz"}
+
+
 def detect_changes(release_a: Release, release_b: Release) -> list[Change]:
     out: list[Change] = []
+    for name in sorted(set(release_a.files) - set(release_b.files) - EXPECTED_ABSENT):
+        out += _vanished_file(release_a, name)
     for name in sorted(set(release_a.files) & set(release_b.files)):
         if content_sha256(release_a.path / name) == content_sha256(release_b.path / name):
             continue  # identical content (line endings aside): nothing can have changed
@@ -36,6 +43,16 @@ def detect_changes(release_a: Release, release_b: Release) -> list[Change]:
         else:
             out += _diff_matrix(name, _read_matrix(release_a, name), _read_matrix(release_b, name))
     return out
+
+
+def _vanished_file(r: Release, name: str) -> list[Change]:
+    """A whole file missing from the new release: every sample in it lost that data."""
+    if name in ROW_FILES:
+        ids = _read_rows(r, name)[ROW_FILES[name]].tolist()
+    else:
+        ids = list(_read_matrix(r, name).columns)
+    return [Change(s, "disappeared", name, [], f"the whole file {name} is missing from the new release", "present", None)
+            for s in ids]
 
 
 # ---------------------------------------------------------------- helpers

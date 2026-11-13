@@ -138,3 +138,17 @@ def test_resaved_clinical_formatting_is_not_a_change(releases):
     c2["flag"] = c2["flag"].map(lambda v: "True" if v == "true" else "NA")
     write(b, c2, protein)
     assert detect_changes(Release(a), Release(b)) == []
+
+
+def test_vanished_file_is_a_finding_except_rna(releases, tmp_path):
+    a, b, clinical, protein = releases
+    write(b, clinical, protein)
+    (b / "protein_rppa.tsv.gz").unlink()
+    ch = detect_changes(Release(a), Release(b))
+    assert ch and all(c.change_type == "disappeared" and c.file == P for c in ch)
+    assert {c.sample_id for c in ch} == set(protein.columns)
+    # RNA missing from the new release is expected for envelopes: no finding
+    import shutil
+    shutil.copy(a / "protein_rppa.tsv.gz", a / "rna_hiseq.tsv.gz")
+    write(b, clinical, protein)
+    assert detect_changes(Release(a), Release(b)) == []
