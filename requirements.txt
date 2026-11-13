@@ -3,3 +3,4 @@ numpy
 jsonschema>=4.0
 streamlit
 pytest
+cryptography>=41

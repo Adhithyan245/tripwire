@@ -133,7 +133,7 @@ Everything that gets scored is deterministic Python. The LLM only translates que
 | Output | `findings.json`, shared format v0.2, must pass `python format/validate.py` |
 | Interface | Streamlit: verdicts first, then evidence trace, limitations panel, human-review flags, research-only label |
 
-**Stack:** Python, pandas or DuckDB, Streamlit, pytest. AI through Ollama locally or a key the user pastes in. Gitleaks before submission. Nothing else.
+**Stack:** Python, pandas or DuckDB, Streamlit, pytest, cryptography (for the organizers' sealed envelopes). AI through Ollama locally or a key the user pastes in. Gitleaks before submission. Nothing else.
 
 **Read first, before writing code:** `format/README.md`, `format/validate.py`, `data/tcga-brca/reference_analyses.py`, and `make_release.py --help`. Do **not** open `releases/practice-B/CHANGES.json` until our tool has run on practice B.
 

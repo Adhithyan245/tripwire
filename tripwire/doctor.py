@@ -13,8 +13,8 @@ import sys
 from .release import file_sha256
 from .validate import challenge_dir
 
-REQUIRED = ["pandas", "numpy", "jsonschema"]
-OPTIONAL = {"streamlit": "the dashboard", "cryptography": "opening sealed envelopes", "pytest": "the tests"}
+REQUIRED = ["pandas", "numpy", "jsonschema", "cryptography"]
+OPTIONAL = {"streamlit": "the dashboard", "pytest": "the tests"}
 
 
 def _marks() -> tuple[str, str, str]:

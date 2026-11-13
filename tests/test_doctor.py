@@ -12,3 +12,14 @@ def test_doctor_reports_missing_challenge_repo_with_the_clone_command(tmp_path, 
     monkeypatch.setattr(doctor, "challenge_dir", lambda explicit=None: None)
     assert doctor.run() == 1
     assert "git clone https://github.com/disleveK/oncosys-hackathon-challenge" in capsys.readouterr().out
+
+
+def test_doctor_does_not_report_ready_without_envelope_dependency(capsys, monkeypatch):
+    real_find_spec = doctor.importlib.util.find_spec
+    monkeypatch.setattr(doctor.importlib.util, "find_spec",
+                        lambda name: None if name == "cryptography" else real_find_spec(name))
+    assert doctor.run() == 1
+    out = capsys.readouterr().out
+    assert "cryptography" in out
+    assert "pip install -r requirements.txt" in out
+    assert "All set" not in out
