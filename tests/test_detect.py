@@ -125,3 +125,16 @@ def test_detector_feeds_impact_and_findings(releases):
     f = doc["findings"][0]
     assert f["kind"] == "sample_swap" and f["affects_analyses"] == ["A1"] and f["not_affected_analyses"] == ["A2"]
     assert not any(x["kind"] == "other" for x in doc["findings"])  # explained, so no "unexplained" finding
+
+
+def test_resaved_clinical_formatting_is_not_a_change(releases):
+    """Another tool re-saving the file ('55' -> '55.0', 'true' -> 'True', '' -> 'NA') changes no values."""
+    a, b, clinical, protein = releases
+    c = clinical.copy()
+    c["flag"] = ["true" if i % 2 else "" for i in range(len(c))]
+    write(a, c, protein)
+    c2 = c.copy()
+    c2["age"] = c2["age"].astype(float)
+    c2["flag"] = c2["flag"].map(lambda v: "True" if v == "true" else "NA")
+    write(b, c2, protein)
+    assert detect_changes(Release(a), Release(b)) == []

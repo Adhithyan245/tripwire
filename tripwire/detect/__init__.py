@@ -217,6 +217,18 @@ def _read_rows(r: Release, name: str) -> pd.DataFrame:
 
 
 ID_LIKE = {"sampleID", "sample", "sample_type", "sample_type_id", "_PATIENT"}
+MISSING = {"", "na", "nan", "none", "null", "n/a"}
+
+
+def _canon(df: pd.DataFrame) -> np.ndarray:
+    """Compare values, not formatting: '55' == '55.0', 'true' == 'True', and blank / NA / nan are all missing."""
+    out = {}
+    for c in df.columns:
+        t = df[c].astype(str).str.strip().str.replace(r"\s+", " ", regex=True).str.lower()
+        miss = t.str.lower().isin(MISSING)
+        num = pd.to_numeric(t.where(~miss), errors="coerce")
+        out[c] = np.where(miss, "", np.where(num.notna(), num.map(lambda v: repr(float(v))), t))
+    return pd.DataFrame(out, index=df.index).to_numpy()
 
 
 def _diff_rows(name: str, a: pd.DataFrame, b: pd.DataFrame, key: str) -> list[Change]:
@@ -235,7 +247,7 @@ def _diff_rows(name: str, a: pd.DataFrame, b: pd.DataFrame, key: str) -> list[Ch
     if common:
         A = a.loc[[ma[k] for k in common], cols].to_numpy()
         B = b.loc[[mb[k] for k in common], cols].to_numpy()
-        diff = A != B
+        diff = _canon(a.loc[[ma[k] for k in common], cols]) != _canon(b.loc[[mb[k] for k in common], cols])
         for r in np.nonzero(diff.any(axis=1))[0]:
             changed = [cols[j] for j in np.nonzero(diff[r])[0]]
             before = {c: A[r][cols.index(c)] for c in changed[:5]}
@@ -246,9 +258,11 @@ def _diff_rows(name: str, a: pd.DataFrame, b: pd.DataFrame, key: str) -> list[Ch
     appeared = sorted(mb.keys() - ma.keys())
     gone = set(ma.keys() - mb.keys())
     content = [c for c in cols if c not in ID_LIKE]
+    ca = dict(zip(a.index, map(tuple, _canon(a[content])))) if content else {}
+    cb = dict(zip(b.index, map(tuple, _canon(b[content])))) if content else {}
     for s in appeared:
-        row_b = tuple(b.loc[mb[s], content])
-        match = [d for d in gone if _patient(d) == _patient(s) and tuple(a.loc[ma[d], content]) == row_b]
+        row_b = cb.get(mb[s], ())
+        match = [d for d in gone if _patient(d) == _patient(s) and ca.get(ma[d], ()) == row_b]
         if match:
             d = match[0]
             gone.discard(d)
