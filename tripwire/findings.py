@@ -273,6 +273,8 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
     }
     from .next_steps import build_plan
     doc["next_steps"] = build_plan(doc)  # what to do next, and what Tripwire can't tell you
+    from .sources import add_slide_links
+    add_slide_links(doc)  # each cited sample links to its tissue slide in the public IDC viewer
     return doc
 
 

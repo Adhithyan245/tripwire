@@ -14,6 +14,8 @@ CONFIG = {
     "site_confounding_v_fail": 0.5,
     # Sites with fewer labelled samples than this are pooled as "other" before computing V.
     "site_min_samples": 10,
+    # Survival questions: fewer events (deaths) than this in any compared group -> Insufficient Evidence.
+    "min_events_per_group": 10,
     # Rerun the analyses the impact map says are unaffected, to check the map. If one moved anyway,
     # something changed that the detector didn't report, and the analysis is Blocked.
     "verify_unaffected": True,

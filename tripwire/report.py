@@ -71,7 +71,12 @@ def before_after(a: dict) -> str:
 
 
 def evidence_table(ev: list[dict]) -> str:
-    rows = "".join(f"<tr><td>{esc(e.get('kind'))}</td><td><code>{esc(e.get('id'))}</code></td>"
+    def _id(e):
+        code = f"<code>{esc(e.get('id'))}</code>"
+        url = e.get("url") or ""
+        return (f"<a href='{esc(url)}' target='_blank' rel='noopener' title='tissue slide (IDC viewer)'>{code}</a>"
+                if url.startswith("https://") else code)
+    rows = "".join(f"<tr><td>{esc(e.get('kind'))}</td><td>{_id(e)}</td>"
                    f"<td>{esc(e.get('release', ''))}</td><td>{esc(e.get('file', ''))}</td>"
                    f"<td>{esc(e.get('note', ''))}</td></tr>" for e in ev)
     head = "<tr><th>kind</th><th>id</th><th>release</th><th>file</th><th>note</th></tr>"
