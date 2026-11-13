@@ -135,8 +135,42 @@ Two safety nets:
 - **Verification rerun:** Tripwire also reruns the analyses its impact map calls unaffected. If one moved anyway, it's **Blocked** and every changed sample is listed, so a detector miss can't become a false "Ready".
 - **Readiness checks:** a check that hasn't been built shows as unavailable and never counts as a pass.
 
-## Team and data
+## Demo video
 
-Roles and the plan are in [PLAN.md](PLAN.md); how we work is in [CONTRIBUTING.md](CONTRIBUTING.md). All work goes to `dev`.
+**Demo video:** _link added before the Saturday 2:15 PM ET code freeze._
 
-Data: TCGA-BRCA open-access data from the UCSC Xena TCGA hub, fetched by the challenge repo's `fetch.py` and checked against its pinned checksums. It is never committed here. Credit: the TCGA Research Network; UCSC Xena; survival data from the TCGA Pan-Cancer Clinical Data Resource (Liu et al., *Cell* 2018). See the challenge repo's `DATA_LICENSES.md`.
+## Team: Skill issue
+
+| Member | Role |
+| --- | --- |
+| Adhithyan Aravind (@Adhithyan245) | Impact, verdicts, research questions and `findings.json` |
+| Madhan (@MadhanJ05) | Change detection |
+| Hemnaath (@hemnaath04) | Mutation Lab and QA |
+| Annamayya Vennelakanti (@Annamayya9) | Dashboard, review and the demo |
+
+The plan is in [PLAN.md](PLAN.md); how we work is in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## AI use
+
+Tripwire has **no AI features** and calls no AI service, so no API key is needed. Every verdict, finding and next step comes from deterministic code over the event data, and each one cites the rule that produced it.
+
+## Data and credits
+
+- **TCGA-BRCA** open-access data from the UCSC Xena TCGA hub, fetched by the challenge repo's `fetch.py` and checked against its pinned checksums (`python -m tripwire doctor` verifies them). It is never committed here. Credit: the TCGA Research Network; UCSC Xena; survival data from the TCGA Pan-Cancer Clinical Data Resource (Liu et al., *Cell* 2018). See the challenge repo's `DATA_LICENSES.md`.
+- **Slide links** in the evidence point to NCI Imaging Data Commons' public viewer, taken from the challenge repo's `slide_manifest.csv` (slides CC BY 3.0; credit the TCGA Research Network and NCI Imaging Data Commons). Nothing is downloaded.
+- No other data is used. Judged results use the frozen release only.
+
+## Third-party code and licenses
+
+Tripwire's own code is in this repo. It runs the organizers' `envelopes/unseal.py`, `format/validate.py` and `reference_analyses.py` from the challenge repo, unchanged and not copied here. Python packages (`requirements.txt`):
+
+| Package | License |
+| --- | --- |
+| pandas | BSD-3-Clause |
+| NumPy | BSD-3-Clause |
+| jsonschema | MIT |
+| Streamlit | Apache-2.0 |
+| cryptography (needed by the organizers' unsealer) | Apache-2.0 or BSD-3-Clause |
+| pytest (tests only) | MIT |
+
+*Research use only. Tripwire makes no diagnosis, treatment advice, risk score, or claim of clinical validity, regulatory compliance or production readiness.*
