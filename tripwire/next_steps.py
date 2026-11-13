@@ -41,8 +41,17 @@ def build_plan(doc: dict) -> dict:
         why = "; ".join(f["summary"].split(". ")[0] for f in fs)[:300]
         if r["action"] == "flag_for_review":
             hit = sorted({a for f in fs for a in f.get("affects_analyses", [])})
-            why = (f"Until it's explained, keep {', '.join(hit)} and anything else using these samples on hold."
-                   if hit else "Until it's explained, keep results that use these samples on hold.")
+            verdicts = {a["id"]: a.get("verdict") for a in doc.get("analyses", [])}
+            blocked = [a for a in hit if verdicts.get(a) == "Blocked"]
+            usable = [a for a in hit if a not in blocked]
+            bits = []
+            if blocked:
+                bits.append(f"keep {', '.join(blocked)} on hold (Blocked)")
+            if usable:
+                bits.append(f"{', '.join(usable)} can be used with care ({'/'.join(sorted({verdicts.get(a) or 'Conditional' for a in usable}))}), "
+                            "but don't build new work on these samples")
+            why = ("Until it's explained, " + "; ".join(bits) + "." if bits else
+                   "Until it's explained, don't build new work on these samples.")
         steps.append({"rank": rank, "who": who, "action": action, "why": why,
                       "effect": _effect(r.get("preview") or {}) or None,
                       "refs": [r["id"]] + r.get("addresses", [])})
