@@ -84,6 +84,14 @@ LIMITS = [
 ]
 
 st.set_page_config(page_title="Tripwire", page_icon="🧭", layout="wide")
+sys.path.insert(0, str(ROOT / "app"))
+import ui  # noqa: E402  (the visual layer: stylesheet and HTML building blocks)
+
+st.markdown(ui.CSS, unsafe_allow_html=True)
+
+
+def html(s: str) -> None:
+    st.markdown(s, unsafe_allow_html=True)
 
 
 # ------------------------------------------------------------------ data helpers
@@ -122,7 +130,8 @@ def compare(a_path: str, b_path: str, question: str | None, changes_file: str | 
 
 
 def verdict_badge(v: str) -> str:
-    return f":{VERDICT_COLOR.get(v, 'gray')}-background[**{v}**]"
+    """HTML status pill (icon + word); render with html() / unsafe_allow_html."""
+    return ui.pill(v)
 
 
 def practice_demo(root: pathlib.Path | None, a_path: str) -> None:
@@ -173,8 +182,7 @@ def tour() -> None:
 if st.session_state.get("run_demo"):  # a demo needs the release-check view in compare mode
     st.session_state.update(view="Release check", source="Compare releases")
 root = challenge_dir()
-st.sidebar.title("🧭 Tripwire")
-st.sidebar.caption("Cohort Control Tower · team Skill issue")
+st.sidebar.markdown(ui.brand("Skill issue"), unsafe_allow_html=True)
 view = st.sidebar.radio("View", ["Release check", "Mutation Lab"], horizontal=True, key="view")
 t1, t2 = st.sidebar.columns(2)
 if t1.button("Take the tour", use_container_width=True):
@@ -183,8 +191,10 @@ if t2.button("Practice demo", use_container_width=True,
              help="Open the public practice envelope and compare it with release A, in one click."):
     st.session_state["run_demo"] = True
     st.rerun()
+st.sidebar.markdown(ui.section("1 · Source"), unsafe_allow_html=True)
 source = st.sidebar.radio("Findings source", ["Compare releases", "Upload findings.json", "Synthetic example"],
-                          key="source", disabled=view == "Mutation Lab")
+                          key="source", disabled=view == "Mutation Lab", label_visibility="collapsed")
+st.sidebar.markdown(ui.section("2 · Releases"), unsafe_allow_html=True)
 if root is None:
     st.sidebar.error("Challenge repo not found. Clone it next to this repo, or set TRIPWIRE_CHALLENGE_DIR.")
 default_a = str(root / "data" / "tcga-brca" / "raw") if root else ""
@@ -207,6 +217,7 @@ found = releases_on_disk(root)
 choice = st.sidebar.selectbox("Release B (new)", list(found) + ["Other folder…"], index=0 if found else None)
 b_path = st.sidebar.text_input("Folder", "") if choice == "Other folder…" or not found else str(found[choice])
 
+st.sidebar.markdown(ui.section("3 · Question"), unsafe_allow_html=True)
 q_options = ["Release check: does it affect A1 and A2?"] + [c.title for c in CARDS]
 q_pick = st.sidebar.selectbox("Research question", q_options)
 question = None if q_pick == q_options[0] else next(c.id for c in CARDS if c.title == q_pick)
@@ -267,9 +278,8 @@ doc = st.session_state.get("doc")
 
 # ------------------------------------------------------------------ main: nothing yet
 
-st.title("Tripwire")
-st.markdown("**Same sample count, different data.** Tripwire tells you what changed, what it breaks, and what it "
-            "can't see.")
+if view == "Release check":
+    html(ui.app_bar())
 if st.session_state.get("demo_error"):
     st.error(st.session_state["demo_error"])
 
@@ -283,24 +293,27 @@ if view == "Mutation Lab":
     st.stop()
 
 if source == "Compare releases" and doc is None:
-    st.subheader("Start here")
+    html(ui.home("Catch the silent changes in a data release",
+                 "A new release can keep the same number of samples while some are swapped, copied or dropped. "
+                 "Tripwire finds every change, works out which results it breaks, and gives each one a verdict "
+                 "with the evidence behind it."))
     c1, c2, c3 = st.columns(3)
     with c1.container(border=True):
-        st.markdown("**See it work in one click**")
-        st.caption("Opens the public practice envelope and compares it with release A.")
+        html('<div class="tw-step">Try it</div><div class="tw-ct">See it work in one click</div>'
+             '<div class="tw-cm">Opens the public practice envelope and compares it with release A.</div>')
         if st.button("Run the practice demo", type="primary", use_container_width=True, key="demo_main"):
             st.session_state["run_demo"] = True
             st.rerun()
     with c2.container(border=True):
-        st.markdown("**Check your own release**")
-        st.caption("Pick release B in the sidebar, or open a sealed envelope with its number and four words, then "
-                   "press Compare releases. Or switch the source to upload a findings.json.")
+        html('<div class="tw-step">Your data</div><div class="tw-ct">Check your own release</div>'
+             '<div class="tw-cm">Pick release B in the sidebar, or open a sealed envelope with its number and four '
+             'words, then press Compare releases. You can also upload a findings.json.</div>')
     with c3.container(border=True):
-        st.markdown("**Prove it catches changes**")
-        st.caption("Switch the sidebar View to Mutation Lab: plant a known change and watch Tripwire find it.")
-    st.markdown("##### What the verdicts mean")
-    for k, v in VERDICT_HELP.items():
-        st.markdown(f"{verdict_badge(k)} {v}")
+        html('<div class="tw-step">Proof</div><div class="tw-ct">Prove it catches changes</div>'
+             '<div class="tw-cm">Switch the sidebar View to Mutation Lab: plant a known change and watch Tripwire '
+             'find it blind.</div>')
+    st.markdown("#### What the verdicts mean")
+    html(ui.legend(VERDICT_HELP))
     st.caption("New here? Press **Take the tour** in the sidebar.")
     st.stop()
 
@@ -325,21 +338,19 @@ elif st.session_state.get("document_origin") == "upload":
 
 decisions: dict = st.session_state.setdefault("decisions", {})
 status = review_status(apply_decisions(doc, decisions) if decisions else doc)
-c1, c2 = st.columns([3, 2])
-with c1:
-    st.markdown(f"### {verdict_badge(doc.get('verdict', ''))}")
-    st.caption(VERDICT_HELP.get(doc.get("verdict", ""), ""))
-    st.markdown(f"**{doc.get('question', '')}**")
-    rel = doc["data"]["releases"]
-    secs = st.session_state.get("secs")
-    st.caption(f"{rel[0]['name']} → {rel[-1]['name']}" + (f" · compared in {secs:.1f} s" if secs is not None else ""))
-with c2:
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Findings", len(doc.get("findings", [])))
-    m2.metric("Awaiting review", len(status["open"]))
-    m3.metric("Repairs applied", 0, help="Repairs are proposals for a reviewer. Tripwire never applies them.")
-st.warning("**Research use only.** Every swap or duplicate needs a curator's review. Repairs are proposals and are "
-           "never applied automatically.", icon="⚠️")
+rel = doc["data"]["releases"]
+secs = st.session_state.get("secs")
+verdict = doc.get("verdict", "")
+html(ui.hero(verdict, VERDICT_HELP.get(verdict, ""), doc.get("question", ""),
+             f"{rel[0]['name']} → {rel[-1]['name']}" + (f" · compared in {secs:.1f} s" if secs is not None else "")))
+qs = doc.get("questions", [])
+html(ui.tiles([("findings", str(len(doc.get("findings", [])))),
+               ("awaiting human review", str(len(status["open"]))),
+               ("research questions blocked", f"{sum(q.get('verdict') == 'Blocked' for q in qs)} of {len(qs)}")
+               if qs else ("analyses checked", str(len(doc.get("analyses", [])))),
+               ("repairs applied automatically", "0")]))
+html(ui.note("Research use only.", "Every swap or duplicate needs a curator's review. Repairs are proposals and are "
+                                   "never applied automatically."))
 
 tabs = st.tabs(["Verdicts", "Findings & evidence", f"Review ({len(status['open'])} open)", "What Tripwire can't see",
                 "Data & export"])
@@ -354,9 +365,8 @@ with tabs[0]:
             cov = q.get("coverage", {})
             gaps = [c for k in ("skipped", "unavailable", "missing") for c in cov.get(k, [])]
             with st.container(border=True):
-                st.markdown(f"{verdict_badge(q['verdict'])} **{q['title']}**  \n"
-                            f":gray[{q['intended_use']} · {q['cohort']}]")
-                st.write(q["why"])
+                use = "model training" if q.get("intended_use") == "model_training" else q.get("intended_use", "")
+                html(ui.card_head(q["verdict"], q["title"], f"{use} · {q['cohort']}", q["why"]))
                 if gaps:
                     st.caption(f"Checks not run (not a pass): {', '.join(gaps)}")
                 ran = [c for c in q.get("checks", []) if c.get("status") not in ("skipped", "unavailable")]
@@ -371,8 +381,7 @@ with tabs[0]:
     st.subheader("Analyses")
     for a in doc.get("analyses", []):
         with st.container(border=True):
-            st.markdown(f"{verdict_badge(a['verdict'])} **{a['id']} · {a.get('title', '')}** :gray[({a['status']})]")
-            st.write(a["why"])
+            html(ui.card_head(a["verdict"], f"{a['id']} · {a.get('title', '')}", f"result {a['status']}", a["why"]))
             if a.get("impact"):
                 st.caption(a["impact"])
             ic = a.get("input_changes")
@@ -398,7 +407,9 @@ with tabs[1]:
             continue
         with st.expander(f"{SEV_ICON.get(f.get('severity'), '')} {f['id']} · {f.get('kind')} · "
                          f"{f.get('severity')} severity" + (" · needs review" if f.get("needs_human_review") else "")):
-            st.write(f["summary"])
+            html(ui.sev_pill(f.get("severity", "none")) + (" <span class='tw-pill warn'><i>!</i>needs human review"
+                                                            "</span>" if f.get("needs_human_review") else "")
+                 + f"<div class='tw-cb'>{ui.esc(f['summary'])}</div>")
             if f.get("severity_reason"):
                 st.markdown(f"**Why this severity:** {f['severity_reason']}")
             st.markdown(f"**Affects:** {', '.join(f.get('affects_analyses', [])) or 'none'} · **Not affected:** "
@@ -433,7 +444,7 @@ with tabs[2]:
         with st.container(border=True):
             st.markdown(f"**If every proposed repair were approved** ({', '.join(allp.get('repairs', []))})")
             for x in allp["analyses"]:
-                st.markdown(f"{verdict_badge(x['verdict_if_approved'])} {x['summary']}")
+                html(f"{verdict_badge(x['verdict_if_approved'])} {ui.esc(x['summary'])}")
             st.caption(allp.get("note", ""))
     role = st.text_input("Your role", st.session_state.get("role", ""), placeholder="e.g. data curator")
     st.session_state["role"] = role
@@ -446,8 +457,8 @@ with tabs[2]:
             st.caption("Targets: " + ", ".join(t["id"] for t in r.get("targets", []))[:400])
             pv = r.get("preview") or {}
             for x in pv.get("analyses", []):
-                st.markdown(f"If approved: {verdict_badge(x['verdict_now'])} → "
-                            f"{verdict_badge(x['verdict_if_approved'])} · {x['summary']}")
+                html(f"<div class='tw-cm'>If approved</div>{verdict_badge(x['verdict_now'])} → "
+                     f"{verdict_badge(x['verdict_if_approved'])} <span class='tw-cm'>{ui.esc(x['summary'])}</span>")
             if pv.get("note"):
                 st.caption(pv["note"])
             prev = decisions.get(r["id"], {})
