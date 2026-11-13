@@ -185,7 +185,10 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         })
         action, rside, just = REPAIR[kind]
         rname = A if rside == "A" else B
-        targets = _dedupe([{"kind": "sample", "id": i, "release": rname, "file": file} for i in sorted(ids)])
+        # A swap's repair covers both samples; any other repair covers only the changed samples. In particular,
+        # excluding duplicates must never touch the original they were copied from.
+        repair_ids = ids if kind == "swap" else {c.sample_id for c in chs}
+        targets = _dedupe([{"kind": "sample", "id": i, "release": rname, "file": file} for i in sorted(repair_ids)])
         repairs.append({"id": f"R{len(repairs) + 1}", "action": action, "targets": targets,
                         "justification": just.format(A=A, file=file) + " Proposed only; never applied automatically.",
                         "addresses": [fid]})
@@ -216,6 +219,19 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                         "targets": [{"kind": "analysis", "id": a.id}],
                         "justification": f"Hold {a.id} results until a curator finds what changed in {', '.join(a.files)}. "
                                          "Proposed only; never applied automatically.", "addresses": [fid]})
+
+    # ---- repair previews: what each repair would do to the analyses if approved (on a copy; nothing applied)
+    from .repair_preview import preview
+    for r in repairs:
+        try:
+            r["preview"] = preview(r, release_a, release_b)
+        except (KeyError, ValueError, FileNotFoundError) as e:
+            r["preview"] = {"note": f"Preview unavailable: {e}"}
+    from .repair_preview import preview_all
+    try:
+        all_repairs_preview = preview_all(repairs, release_a, release_b)
+    except (KeyError, ValueError, FileNotFoundError) as e:
+        all_repairs_preview = {"note": f"Preview unavailable: {e}"}
 
     # ---- question cards: same release, a verdict per supported question
     by_analysis = {x["id"]: x for x in analyses_out}
@@ -251,6 +267,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         "analyses": analyses_out,
         "repairs": repairs,
         "questions": questions,
+        "repair_preview_all": all_repairs_preview,
         "settings": {k: v for k, v in CONFIG.items() if k != "producer_team"},
         "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
     }

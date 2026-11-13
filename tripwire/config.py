@@ -8,6 +8,12 @@ CONFIG = {
     "A2_percent_pp_tolerance": 1.0,
     # Fewer than this many samples in any compared group -> Insufficient Evidence
     "min_samples_per_group": 20,
+    # Site confounding: Cramer's V between the label and the tissue source site (from the TCGA barcode).
+    # Cohen's conventions: 0.1 small, 0.5 large. Below "pass" passes; at or above "fail" can't be fixed here.
+    "site_confounding_v_pass": 0.1,
+    "site_confounding_v_fail": 0.5,
+    # Sites with fewer labelled samples than this are pooled as "other" before computing V.
+    "site_min_samples": 10,
     # Rerun the analyses the impact map says are unaffected, to check the map. If one moved anyway,
     # something changed that the detector didn't report, and the analysis is Blocked.
     "verify_unaffected": True,

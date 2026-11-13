@@ -225,3 +225,7 @@ def _check_dict(c: CheckResult) -> dict:
     if c.fix:
         d["fix"] = c.fix
     return d
+
+
+# Built-in readiness checks register themselves on import.
+from . import checks as _checks  # noqa: E402,F401

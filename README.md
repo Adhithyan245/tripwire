@@ -76,6 +76,13 @@ streamlit run app/dashboard.py
 
 Tolerances and minimum sample counts are prototype policy choices, not clinical standards. They're printed in every report.
 
+**For model-training questions**, Tripwire also runs readiness checks, and gives a fix for each problem it finds:
+- **sample size per class**;
+- **patient leakage:** a patient with several samples, or one profile copied under several IDs, could end up on both sides of a train/test split. It's reported as a *potential* risk, because Tripwire never sees your split;
+- **site confounding:** the label spread unevenly across the hospitals that submitted samples, measured by Cramér's V against the barcode's site code.
+
+**Every proposed repair comes with a preview:** what each affected result would become if a reviewer approved it, alone and all together. It's computed on a copy of the new release, and nothing is applied.
+
 ## Using it
 
 | I want to… | Run |
