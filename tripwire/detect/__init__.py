@@ -142,6 +142,17 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
         if s in done:
             continue
         col_b = bv[:, bi[s]]
+        col_a = av[:, ai[s]]
+        lost = ~np.isnan(col_a) & np.isnan(col_b)
+        other = ~np.isclose(col_a, col_b, equal_nan=True) & ~lost
+        if lost.any() and not other.any():  # the only change: values went missing -> lost coverage, not a new value
+            out.append(Change(raw(s, "B"), "coverage_loss", name, [str(f) for f in feats[lost]][:MAX_FIELDS],
+                              f"{int(lost.sum())} of {int((~np.isnan(col_a)).sum())} values present before are now "
+                              "missing; no value changed otherwise",
+                              f"{int((~np.isnan(col_a)).sum())} of {len(feats)} values present",
+                              f"{int((~np.isnan(col_b)).sum())} of {len(feats)} values present"))
+            done.add(s)
+            continue
         src, how = a_identity(hb[s], s), "identical"
         if src is None:
             nn = near_a(col_b, {s})

@@ -27,7 +27,11 @@ CORE_DESC = {
     "label_change": "one sample's ER status flipped in clinical.tsv",
     "value_shift": "one ER-alpha value shifted",
 }
-ALL = {**{s: CORE_DESC.get(s, s) for s in SCENARIOS}, **EXT_DESC}
+try:  # the lab's own descriptions, when it has them
+    from tripwire.mutation_lab.core import DESCRIPTIONS as LAB_DESC
+except ImportError:
+    LAB_DESC = {}
+ALL = {**{s: LAB_DESC.get(s) or CORE_DESC.get(s, s) for s in SCENARIOS}, **EXT_DESC}
 SCENARIO_NAMES = list(ALL)
 
 
