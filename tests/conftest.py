@@ -11,7 +11,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 SUBTYPES = ["LumA", "LumB", "Basal", "Her2", "Normal"]
 
 
-def make_release(dest: pathlib.Path, n=80, seed=0):
+def make_release(dest: pathlib.Path, n=120, seed=0):
     rng = np.random.default_rng(seed)
     ids = [f"TCGA-T{i // 100}-{i:04d}-01" for i in range(n)] + [f"TCGA-T0-{i:04d}-11" for i in range(5)]
     er = ["Positive" if i % 3 else "Negative" for i in range(len(ids))]

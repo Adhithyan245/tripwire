@@ -57,6 +57,15 @@ Even without a detector, Tripwire reruns the analyses the impact map calls unaff
 python -m pytest -q
 ```
 
+### Question cards
+
+```bash
+python -m tripwire questions                       # list the supported research questions
+python -m tripwire diff <A> <B> --question predict_er_from_protein
+```
+
+Every run assesses every supported card and writes them under `questions` in `findings.json`, each with its `verdict`, `why`, `release_part`, `checks`, `coverage` and `relevant_findings`. `--question` makes one card the top-level question and verdict. A card whose inputs aren't in the release says the data can't answer it. A required check that hasn't been built shows as `unavailable` and is never counted as a pass.
+
 ## Team
 
 See [PLAN.md](PLAN.md) for roles and [CONTRIBUTING.md](CONTRIBUTING.md) for how we work. `main` is locked; all work goes to `dev`.

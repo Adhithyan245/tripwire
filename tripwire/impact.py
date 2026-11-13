@@ -47,8 +47,8 @@ def _ids(ch: Change) -> set[str]:
 def touches(ch: Change, a: Analysis, eligible: set[str]) -> tuple[bool, str]:
     if ch.file not in a.files:
         return False, f"in a file it doesn't read ({ch.file})"
-    used = a.fields.get(ch.file, set())
-    if ch.fields and not (set(ch.fields) & used):
+    used = a.fields.get(ch.file, set())  # None = reads every row of that file
+    if ch.fields and used is not None and not (set(ch.fields) & used):
         return False, f"change fields it doesn't use ({ch.file}: {', '.join(sorted(ch.fields))[:80]})"
     if not (_ids(ch) & eligible):
         return False, "are samples outside its cohort"

@@ -5,6 +5,7 @@ import argparse
 import json
 import pathlib
 import sys
+import textwrap
 import time
 
 from .contract import load_changes
@@ -27,13 +28,24 @@ def main(argv=None):
     d.add_argument("--hash-b", choices=["file", "content"], default="content")
     d.add_argument("--no-verify-unaffected", action="store_true", help="don't rerun analyses the impact map says are unaffected")
     d.add_argument("--challenge-dir", help="path to the challenge repo (for the validator)")
+    d.add_argument("--question", help="question-card id: makes the top-level question and verdict that card's "
+                                      "(see `python -m tripwire questions`)")
+    sub.add_parser("questions", help="list the supported question cards")
     e = sub.add_parser("envelope", help="Saturday in one command: open a sealed envelope, compare it with release A, "
                                         "write findings.json")
     e.add_argument("envelope", help="envelope number (e.g. 07) or 'practice'")
     e.add_argument("words", nargs=4, help="the four-word code the judge gives you")
     e.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
     e.add_argument("--out", help="default: out/findings-<envelope>.json")
+    e.add_argument("--question", help="question-card id, as for diff")
     args = p.parse_args(argv)
+
+    if args.cmd == "questions":
+        from .questions import CARDS
+        for c in CARDS:
+            print(f"{c.id:<34} {c.intended_use:<15} {c.title}")
+            print(f"{'':<34} inputs: {', '.join(c.files)}; checks: {', '.join(c.required_checks)}")
+        return 0
 
     if args.cmd == "envelope":
         return envelope(args)
@@ -45,7 +57,8 @@ def main(argv=None):
     else:
         from .detect import detect_changes
         changes = detect_changes(a, b)
-    doc = build(changes, a, b, args.hash_a, args.hash_b, verify_unaffected=not args.no_verify_unaffected)
+    doc = build(changes, a, b, args.hash_a, args.hash_b, verify_unaffected=not args.no_verify_unaffected,
+                question=args.question)
 
     out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -54,6 +67,10 @@ def main(argv=None):
     print(f"Tripwire: {a.name} -> {b.name}   overall verdict: {doc['verdict']}")
     for an in doc["analyses"]:
         print(f"  {an['id']:<3} {an['verdict']:<22} {an['why']}")
+    print("  Questions:")
+    for q in doc["questions"]:
+        mark = "*" if q["id"] == args.question else " "
+        print(f" {mark} {q['id']:<34} {q['verdict']:<22} {textwrap.shorten(q['why'], 120, placeholder=' ...')}")
     print(f"  {len(doc['findings'])} finding(s), {len(doc['repairs'])} proposed repair(s) (none applied)")
     try:
         errs = validate(doc, args.challenge_dir)
@@ -93,7 +110,8 @@ def envelope(args) -> int:
     print(f"Unsealed in {time.time() - t0:.1f}s")
     release_a = root / "data" / "tcga-brca" / "raw"
     out = args.out or f"out/findings-{name}.json"
-    return main(["diff", str(release_a), str(opened), "--out", out, "--challenge-dir", str(root)])
+    extra = ["--question", args.question] if args.question else []
+    return main(["diff", str(release_a), str(opened), "--out", out, "--challenge-dir", str(root), *extra])
 
 
 if __name__ == "__main__":
