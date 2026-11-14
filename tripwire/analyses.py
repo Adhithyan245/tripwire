@@ -1,4 +1,4 @@
-"""The analyses Tripwire protects. Each one declares what it reads, so the impact map can decide from logic, not
+"""The analyses Driftwire protects. Each one declares what it reads, so the impact map can decide from logic, not
 hardcoding, whether a change touches it.
 
 A1 and A2 reproduce data/tcga-brca/reference_analyses.py exactly (tests/test_analyses.py checks this against the

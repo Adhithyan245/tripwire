@@ -33,4 +33,4 @@ def test_diff_writes_report_next_to_findings(releases, tmp_path):
     main(["diff", str(a), str(a), "--out", str(out), "--name-b", "again"])
     assert out.exists() and out.with_suffix(".html").exists()
     assert main(["report", str(out), "--out", str(tmp_path / "r.html")]) == 0
-    assert "Tripwire audit report" in (tmp_path / "r.html").read_text(encoding="utf-8")
+    assert "Driftwire audit report" in (tmp_path / "r.html").read_text(encoding="utf-8")

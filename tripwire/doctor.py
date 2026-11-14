@@ -1,4 +1,4 @@
-"""python -m tripwire doctor: check the setup and say exactly what to do next.
+"""python -m driftwire doctor: check the setup and say exactly what to do next.
 
 Checks Python, the packages, the challenge repo, release A and its checksums, and the practice envelope. Every
 problem comes with the one command that fixes it. Nothing is changed or downloaded.
@@ -79,15 +79,15 @@ def run(explicit_challenge: str | None = None) -> int:
             good("practice envelope already open")
         else:
             warn("practice envelope not opened yet (optional)",
-                 "python -m tripwire envelope practice orange meadow pilot lantern")
+                 "python -m driftwire envelope practice orange meadow pilot lantern")
 
-    print("Tripwire doctor\n" + "\n".join(lines))
+    print("Driftwire doctor\n" + "\n".join(lines))
     if ok:
         print("\nAll set. Next:\n"
-              "  python -m tripwire envelope practice orange meadow pilot lantern   # one-command demo run\n"
+              "  python -m driftwire envelope practice orange meadow pilot lantern   # one-command demo run\n"
               "  streamlit run app/dashboard.py                                     # the dashboard (tour opens itself)")
     else:
-        print(f"\nFix the {NO} items above, then run `python -m tripwire doctor` again.")
+        print(f"\nFix the {NO} items above, then run `python -m driftwire doctor` again.")
     return 0 if ok else 1
 
 

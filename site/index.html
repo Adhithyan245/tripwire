@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tripwire</title>
-<meta name="description" content="Tripwire finds what silently changed between two releases of a dataset, shows which results it breaks, and hands a person the decision.">
+<title>Driftwire</title>
+<meta name="description" content="Driftwire finds what silently changed between two releases of a dataset, shows which results it breaks, and hands a person the decision.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
 <body>
 <div class="app">
   <aside class="side" aria-label="Main">
-    <a class="logo" href="#run" aria-label="Tripwire home">
+    <a class="logo" href="#run" aria-label="Driftwire home">
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9"/><path d="M6 17h20"/><circle cx="16" cy="17" r="3.5"/></svg>
     </a>
     <nav id="nav" class="nav"></nav>
@@ -26,7 +26,7 @@
   <div class="main">
     <header class="bar">
       <div class="bar-title">
-        <span class="word">Tripwire</span>
+        <span class="word">Driftwire</span>
         <span class="crumbs" id="crumbs"></span>
       </div>
       <div class="bar-actions">
@@ -47,7 +47,7 @@
 
 <aside id="drawer" class="drawer" aria-label="Reviewer" hidden></aside>
 <div id="scrim" class="scrim" hidden></div>
-<div id="drop" class="dropall" hidden><div>Drop a Tripwire <span class="mono">findings.json</span> to open it</div></div>
+<div id="drop" class="dropall" hidden><div>Drop a Driftwire <span class="mono">findings.json</span> to open it</div></div>
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <input id="file" type="file" accept=".json,application/json" hidden>

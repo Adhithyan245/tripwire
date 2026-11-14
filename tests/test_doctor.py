@@ -4,7 +4,7 @@ from tripwire import doctor
 def test_doctor_passes_here_or_names_the_fix(capsys):
     code = doctor.run()
     out = capsys.readouterr().out
-    assert "Tripwire doctor" in out
+    assert "Driftwire doctor" in out
     assert (code == 0 and "All set" in out) or (code == 1 and "fix:" in out)
 
 
