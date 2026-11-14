@@ -62,3 +62,27 @@ def test_dashboard_first_visit_tour_and_mutation_lab_view():
     next(r for r in app.sidebar.radio if r.label == "View").set_value("Mutation Lab").run()
     assert not app.exception
     assert any(s.value == "Mutation Lab" for s in app.subheader)
+
+
+def test_failed_comparison_clears_previous_results(releases):
+    app = AppTest.from_file(str(EXAMPLE.parent / "dashboard.py"), default_timeout=60).run()
+    app.session_state["doc"] = json.loads(EXAMPLE.read_text())
+    app.session_state["document_origin"] = "comparison"
+    app.session_state["decisions"] = {"R1": {"decision": "approve", "reason": "checked", "reviewer_role": "curator"}}
+    app.run()
+    next(t for t in app.sidebar.text_input if t.label == "Release A (trusted baseline)").set_value("/not-a-release").run()
+    choice = next(s for s in app.sidebar.selectbox if s.label == "Release B (new)")
+    choice.set_value("Other folder…").run()
+    next(t for t in app.sidebar.text_input if t.label == "Folder").set_value("/also-not-a-release").run()
+    next(b for b in app.sidebar.button if b.label == "Compare releases").click().run()
+    assert any("Couldn't compare" in e.value for e in app.error)
+    assert app.session_state.get("doc") is None
+    assert not app.session_state.get("decisions")
+    assert not any(b.label == "Download findings.json" for b in app.get("download_button"))
+    a, b, clinical, protein = releases
+    write(b, clinical, protein)
+    next(t for t in app.sidebar.text_input if t.label == "Release A (trusted baseline)").set_value(str(a)).run()
+    next(t for t in app.sidebar.text_input if t.label == "Folder").set_value(str(b)).run()
+    next(button for button in app.sidebar.button if button.label == "Compare releases").click().run()
+    assert not app.exception
+    assert app.session_state["doc"] is not None
