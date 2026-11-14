@@ -146,6 +146,8 @@ One practice release, seven research questions, and four different verdicts, eac
 
 The same data passes for describing subtypes and survival, but training a model on protein is **Blocked**: the swapped and copied profiles would become wrong labels and leak across a train/test split. Saved in [docs/verdict_table.md](docs/verdict_table.md).
 
+To follow one finding through every link, from the sample IDs and file fingerprints to the before and after values, the analyses and questions it touches, the repair and the tissue slides, see [docs/trace_example.md](docs/trace_example.md) (the sample swap, F1).
+
 ## What the verdicts mean
 
 | Verdict | Meaning |
