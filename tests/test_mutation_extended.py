@@ -44,3 +44,21 @@ def test_unknown_scenario_and_existing_target(source, tmp_path):
     (tmp_path / "y").mkdir()
     with pytest.raises(FileExistsError):
         generate_extended(source, tmp_path / "y", "id_case")
+
+
+def test_mixed_changes_truth_partners_and_source_integrity(source, tmp_path):
+    from tripwire.release import content_sha256
+
+    before = {p.name: content_sha256(p) for p in source.iterdir() if p.is_file()}
+    truth = generate_extended(source, tmp_path / "mixed", "mixed_changes", 42)
+    assert sorted(c.change_type for c in truth) == ["disappeared", "duplicate", "label_change", "swap", "swap"]
+    swaps = [c for c in truth if c.change_type == "swap"]
+    assert swaps[0].sample_id == swaps[1].related_sample_id
+    assert swaps[1].sample_id == swaps[0].related_sample_id
+    events = [{str(s).strip().upper() for c in swaps for s in (c.sample_id, c.related_sample_id) if s}]
+    events += [{str(s).strip().upper() for s in (c.sample_id, c.related_sample_id) if s}
+               for c in truth if c.change_type != "swap"]
+    assert all(not events[i] & events[j] for i in range(len(events)) for j in range(i))
+    assert before == {p.name: content_sha256(p) for p in source.iterdir() if p.is_file()}
+    score = evaluate(truth, detect_changes(Release(source), Release(tmp_path / "mixed")))
+    assert sum(x["partner_matches"] for x in score["by_change_type"]) == 3
