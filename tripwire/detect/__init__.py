@@ -163,6 +163,33 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
     appeared, disappeared = sorted(bi.keys() - ai.keys()), sorted(ai.keys() - bi.keys())
     changed = sorted(s for s in common if ha[s] != hb[s])
     done: set[str] = set()
+    _src_cache: dict[str, tuple[str | None, str]] = {}
+
+    def source(s: str) -> tuple[str | None, str]:
+        """The release-A sample whose previous profile s now carries (exactly, or near-identically), if any."""
+        if s not in _src_cache:
+            src, how = a_identity(hb[s], s), "identical"
+            if src is None:
+                nn = near_a(bv[:, bi[s]], {s})
+                if nn:
+                    src, how = nn[0], f"near-identical (r={nn[1]:.4f})"
+            _src_cache[s] = (src, how)
+        return _src_cache[s]
+
+    def closes(s: str) -> bool:
+        """True only when following "carries the previous profile of" from s returns to s through samples whose
+        own profiles all moved: a real cycle of swaps. An open chain proves a transfer, not a swap."""
+        seen, cur = {s}, s
+        for _ in range(len(changed)):
+            nxt = source(cur)[0]
+            if nxt is None or nxt not in common or ha[nxt] == hb[nxt]:
+                return False
+            if nxt == s:
+                return True
+            if nxt in seen:
+                return False
+            seen.add(nxt); cur = nxt
+        return False
 
     for s in changed:
         if s in done:
@@ -179,11 +206,7 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
                               f"{int((~np.isnan(col_b)).sum())} of {len(feats)} values present"))
             done.add(s)
             continue
-        src, how = a_identity(hb[s], s), "identical"
-        if src is None:
-            nn = near_a(col_b, {s})
-            if nn:
-                src, how = nn[0], f"near-identical (r={nn[1]:.4f})"
+        src, how = source(s)
         if src and src in common and (hb[src] == ha[s] or _r(bv[:, bi[src]], av[:, ai[s]]) >= NEAR_DUP_R) and src not in done:
             out.append(Change(raw(s, "B"), "swap", name, [], f"profile is {how} to {raw(src, 'A')}'s in the previous "
                               f"release, and {raw(src, 'B')} now carries this sample's old profile",
@@ -197,9 +220,19 @@ def _diff_matrix(name: str, a: pd.DataFrame, b: pd.DataFrame) -> list[Change]:
                               "own profile is gone", "own profile", f"copy of {raw(src, 'B')}",
                               related_sample_id=raw(src, "B")))
             done.add(s)
+        elif src and src in common and hb.get(src) != ha.get(src) and not closes(s):
+            # An open chain: s carries src's previous profile and src's own profile changed, but no profile moves
+            # back to close a cycle. That proves a one-way transfer, not a swap; a person has to say what happened.
+            ch = _value_change(name, raw(s, "B"), feats, av[:, ai[s]], col_b, None, how)
+            ch.evidence = (f"now carries {raw(src, 'A')}'s previous profile ({how}), and {raw(src, 'B')}'s own profile "
+                           "changed too, but no profile moved back to close a cycle: a one-way transfer, not a "
+                           "confirmed swap; " + ch.evidence)
+            ch.related_sample_id = raw(src, "B")
+            out.append(ch)
+            done.add(s)
         elif src and src in common and hb.get(src) != ha.get(src):
-            # Part of a chain of swaps (A gets B's profile, B gets C's, C gets A's): no pair exchanges directly,
-            # but each sample now carries another's previous profile, and that sample's own profile moved too.
+            # Part of a closed chain of swaps (A gets B's profile, B gets C's, C gets A's): no pair exchanges
+            # directly, but following who carries whose previous profile leads back to the start.
             out.append(Change(raw(s, "B"), "swap", name, [], f"profile is {how} to {raw(src, 'A')}'s in the previous "
                               f"release, and {raw(src, 'B')}'s own profile changed too (part of a chain of swaps)",
                               "own profile", f"profile of {raw(src, 'A')}", related_sample_id=raw(src, "B")))
