@@ -183,7 +183,7 @@ if st.session_state.get("run_demo"):  # a demo needs the release-check view in c
     st.session_state.update(view="Release check", source="Compare releases")
 root = challenge_dir()
 st.sidebar.markdown(ui.brand("Skill issue"), unsafe_allow_html=True)
-view = st.sidebar.radio("View", ["Release check", "Mutation Lab", "Prepare data with AI"], horizontal=True, key="view")
+view = st.sidebar.radio("View", ["Release check", "Run on your data", "Mutation Lab", "Prepare data with AI"], horizontal=True, key="view")
 t1, t2 = st.sidebar.columns(2)
 if t1.button("Take the tour", use_container_width=True):
     st.session_state.update(tour_step=0, show_tour=True)
@@ -291,6 +291,15 @@ if view == "Release check":
     html(ui.app_bar())
 if st.session_state.get("demo_error"):
     st.error(st.session_state["demo_error"])
+
+if view == "Run on your data":
+    try:
+        from own_data_tab import render as render_own
+    except ImportError:
+        sys.path.insert(0, str(ROOT / "app"))
+        from own_data_tab import render as render_own
+    render_own(st, html, ui, a_path)
+    st.stop()
 
 if view == "Prepare data with AI":
     try:
