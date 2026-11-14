@@ -48,6 +48,8 @@ def main(argv=None):
     vt = sub.add_parser("verdicts", help="one release, every question card: verdict and written reason as a table")
     vt.add_argument("release_a")
     vt.add_argument("release_b")
+    ins = sub.add_parser("inspect", help="check a release folder's layout: file roles, sizes, and what can run")
+    ins.add_argument("folders", nargs="+")
     sub.add_parser("questions", help="list the supported question cards")
     doc_p = sub.add_parser("doctor", help="check the setup and print exactly what to do next")
     doc_p.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
@@ -69,6 +71,11 @@ def main(argv=None):
         return 0
 
 
+    if args.cmd == "inspect":
+        from .inspect import inspect_folder, print_report
+        for folder in args.folders:
+            print_report(inspect_folder(folder))
+        return 0
     if args.cmd == "verdicts":
         from .api import check
         print(verdict_table(check(args.release_a, args.release_b).doc))
