@@ -108,6 +108,27 @@ def main(argv=None):
     return 1 if errs else 0
 
 
+ENVELOPE_FAILED = 3  # distinct from 0 (written, valid) and 1 (written, but the validator found problems)
+
+
+def unseal_hint(output: str) -> str:
+    """One next step that matches why the organizers' unseal.py stopped, instead of a generic guess."""
+    o = output.lower()
+    if "release a" in o or "data/tcga-brca/raw" in o or "fetch.py" in o:
+        return ("Release A is missing or doesn't match its published fingerprint: run "
+                "python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna, then retry "
+                "(python -m driftwire doctor checks this).")
+    if "doesn't open envelope" in o or "isn't an envelope number" in o or "isn't a sealed envelope" in o:
+        return "Check the envelope number and the four words (hyphens or spaces both work; capitals don't matter)."
+    if "there's no envelope" in o:
+        return "Check the envelope number on your card; if it's right, run git pull in the challenge repo and retry."
+    if "git pull" in o or "sha256sums" in o:
+        return "Your copy of the challenge repo is out of date: run git pull in it, then retry."
+    if "no module named" in o:
+        return "A package is missing: pip install -r requirements.txt (python -m driftwire doctor checks this)."
+    return "See the organizers' message above for the reason."
+
+
 def envelope(args) -> int:
     """Unseal with the organizers' script, then run the normal diff on the opened release."""
     import os
@@ -125,10 +146,13 @@ def envelope(args) -> int:
         env = dict(os.environ, PYTHONUTF8="1")  # unseal.py prints check marks; Windows consoles crash without this
         # The organizers' script, unchanged, with pandas writing LF line endings (see tripwire/unseal_lf.py).
         r = subprocess.run([sys.executable, "-m", "tripwire.unseal_lf", args.envelope, *args.words], cwd=root,
-                           env=dict(env, PYTHONPATH=str(pathlib.Path(__file__).resolve().parent.parent)))
+                           env=dict(env, PYTHONPATH=str(pathlib.Path(__file__).resolve().parent.parent)),
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        print(r.stdout, end="")
+        print(r.stderr, end="", file=sys.stderr)
         if r.returncode != 0 and not opened.is_dir():
-            print("Unsealing failed; see the organizers' message above (check the number and the four words).")
-            return r.returncode or 1
+            print(f"Envelope not opened. {unseal_hint(r.stdout + r.stderr)}")
+            return ENVELOPE_FAILED
     else:
         print(f"Envelope {name} is already open at {opened}; comparing it.")
     print(f"Unsealed in {time.time() - t0:.1f}s")

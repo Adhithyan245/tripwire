@@ -113,6 +113,8 @@ Tolerances and minimum sample counts are prototype policy choices, not clinical 
 
 **Judging day.** The judge gives an envelope number and four words, for example `python -m tripwire envelope 07 amber falcon river quartz`. It opens the envelope with the organizers' own `unseal.py`, compares, validates and writes the report, usually in a few seconds. The envelope has no RNA file by design, and Tripwire doesn't flag that.
 
+Exit codes: **0** means findings were written and the validator passed. **1** means they were written but the validator found problems. **3** means the envelope didn't open, and the last line says why: release A missing, a wrong number or words, or an out-of-date challenge repo. The verdict is in the output, never in the exit code.
+
 **The dashboard** can compare two releases, open a sealed envelope, show a `findings.json` from another tool (upload it: it gets structural checks, and the organizers' validator runs in Data & export), or load a clearly labelled synthetic example. It has these tabs:
 - **Verdicts:** the overall verdict, each research question and each analysis, with before and after values.
 - **Findings & evidence:** every change with its samples, files, severity reason and limitation, plus "trace one sample".
