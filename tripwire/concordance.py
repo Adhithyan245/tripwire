@@ -45,6 +45,7 @@ def _labels(r: Release, col: str) -> pd.Series:
         return pd.Series(dtype=object)
     c = r.clinical.drop_duplicates(subset=["sampleID"])
     s = pd.Series(c[col].values, index=c["sampleID"].map(norm_id))
+    s = s[~s.index.duplicated(keep=False)]  # an ID listed twice (e.g. different case) is ambiguous: leave it out
     return s[s.isin(["Positive", "Negative"])]
 
 

@@ -45,8 +45,23 @@ def detect_changes(release_a: Release, release_b: Release) -> list[Change]:
         if name in ROW_FILES:
             out += _diff_rows(name, _read_rows(release_a, name), _read_rows(release_b, name), ROW_FILES[name])
         else:
-            out += _diff_matrix(name, _read_matrix(release_a, name), _read_matrix(release_b, name))
+            ma_, mb_ = _read_matrix(release_a, name), _read_matrix(release_b, name)
+            out += _diff_matrix(name, ma_, mb_)
+            out += _repeated_features(name, release_a, release_b, list(mb_.columns))
     return out
+
+
+def _repeated_features(name: str, a: Release, b: Release, samples: list[str]) -> list[Change]:
+    """A feature row (protein, gene) listed more than once in the new release: which copy an analysis reads is
+    ambiguous, so every sample is flagged for that field rather than silently using one copy."""
+    rep = set(b.__dict__.get("repeated_features", {}).get(name, [])) - set(a.__dict__.get("repeated_features", {}).get(name, []))
+    if not rep:
+        return []
+    shown = ", ".join(sorted(rep)[:5])
+    return [Change(s, "value_shift", name, sorted(rep)[:MAX_FIELDS],
+                   f"feature row(s) {shown} appear more than once in the new release's {name}; Driftwire compared the "
+                   "first copy, but which copy is meant is ambiguous", "listed once", "listed more than once")
+            for s in samples]
 
 
 def _all_ids(r: Release, name: str) -> list[str]:
@@ -107,7 +122,7 @@ def _informative(col: np.ndarray) -> bool:
 # ---------------------------------------------------------------- molecular files
 
 def _read_matrix(r: Release, name: str) -> pd.DataFrame:
-    df = r.protein if name == "protein_rppa.tsv.gz" else pd.read_csv(r.path / name, sep="\t", index_col=0)
+    df = r.table(name)  # each feature row once; Release.repeated_features records any repeat
     # A repeated column ID comes back as 'ID.1', 'ID.2'; keep the first copy. _repeated_ids reports the repeat.
     real = set(_all_ids(r, name))
     return df[[c for c in df.columns if c in real]] if len(real) < df.shape[1] else df
