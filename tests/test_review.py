@@ -39,9 +39,10 @@ def test_reason_role_and_known_repair_are_required(doc):
 
 
 def test_review_status_tracks_open_items(doc):
-    assert review_status(doc)["open"] == ["F1"]
-    rid = doc["repairs"][0]["id"]
-    new = apply_decisions(doc, {rid: {"decision": "reject", "reason": "intended relabel", "reviewer_role": "PI"}})
+    flagged = [f["id"] for f in doc["findings"] if f.get("needs_human_review")]
+    assert review_status(doc)["open"] == flagged and "F1" in flagged
+    decide = {r["id"]: {"decision": "reject", "reason": "intended relabel", "reviewer_role": "PI"} for r in doc["repairs"]}
+    new = apply_decisions(doc, decide)
     assert review_status(new)["open"] == []
 
 

@@ -123,6 +123,17 @@ Exit codes: **0** means findings were written and the validator passed. **1** me
 - **Data & export:** a validator check and downloads.
 - **Mutation Lab** (its own view in the sidebar): plant a known change, or run the full scorecard.
 
+## It also checks the labels themselves
+
+A comparison between releases can't see an error that was already in the trusted release. Driftwire adds one check that can: **receptor labels that contradict the tumor's own molecular data.** ER and HER2 status decide treatment and trial eligibility (rules such as "ER ≥ 1%" read exactly these labels), and a mislabelled sample silently corrupts any model or cohort built on it.
+
+| Label | Cross-checked against | Flagged when |
+| --- | --- | --- |
+| ER status | ER-alpha protein (RPPA) | ER-negative but protein at or above the typical ER-positive level and at least 3 robust SDs above its group, or the mirror case |
+| HER2 status | ERBB2 copy number (GISTIC) and HER2 protein | HER2-negative but highly amplified with positive-level protein, or the mirror case |
+
+On the practice release, it flags **6 ER and 4 HER2 labels that were already contradicted in the trusted release**. It also independently flags one of the two swapped samples, which now carries an ER-positive profile under an ER-negative label. Each flag becomes a `label_conflict` finding (a kind defined in the shared format), with the sample's own values as evidence. A flag-for-review repair goes to pathology or the data provider, and the ER question cards show a `label_concordance` check. Driftwire never relabels anything: a flag is evidence for a person, not a correction.
+
 ## Use it where your data moves
 
 **In a notebook.** One call runs the same engine and returns the same findings.json. In Jupyter the result shows as a readable summary.

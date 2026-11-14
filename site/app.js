@@ -9,7 +9,7 @@
   const KIND = {
     sample_swap: "Swapped profiles", duplicate: "Copied profiles", membership_change: "Samples lost or added",
     label_change: "Changed labels", sample_type_change: "Sample type changed", id_format_change: "Reformatted IDs",
-    value_shift: "Values shifted", coverage_loss: "Coverage lost",
+    value_shift: "Values shifted", coverage_loss: "Coverage lost", label_conflict: "Label contradicts its own data",
   };
   const ACTION = {
     restore_from_previous_release: "Restore from the trusted release", exclude: "Exclude from analyses",

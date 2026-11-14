@@ -32,7 +32,10 @@ def test_swap_touches_A1_not_A2(releases):
     doc = build(ch, Release(a), Release(b))
     v = {an["id"]: an["verdict"] for an in doc["analyses"]}
     assert v["A2"] == "Ready" and v["A1"] in ("Conditional", "Blocked")
-    assert len(doc["findings"]) == 1 and doc["findings"][0]["kind"] == "sample_swap"  # one finding per pair
+    change_findings = [f for f in doc["findings"] if f["kind"] != "label_conflict"]
+    assert len(change_findings) == 1 and change_findings[0]["kind"] == "sample_swap"  # one finding per pair
+    # the biological check independently flags the swapped samples: their ER labels now contradict the data they carry
+    assert all("F1" in f["summary"] for f in doc["findings"] if f["kind"] == "label_conflict")
     assert all(f["needs_human_review"] for f in doc["findings"])
 
 

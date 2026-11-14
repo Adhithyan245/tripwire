@@ -259,6 +259,49 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
                         "justification": f"Hold {a.id} results until a curator finds what changed in {', '.join(a.files)}. "
                                          "Proposed only; never applied automatically.", "addresses": [fid]})
 
+    # ---- biological consistency: receptor labels that contradict the tumor's own molecular data. Runs on both
+    # releases, so it also reports errors that were already in the trusted one (a plain comparison can't see those).
+    from .concordance import MARKER_TEXT, discordances
+    label_findings: dict[str, str] = {}
+    try:
+        now_d, before_d = discordances(release_b), discordances(release_a)
+    except (KeyError, ValueError, FileNotFoundError):
+        now_d, before_d = [], []
+    sample_finding = {norm_id(e["id"]): f["id"] for f in findings for e in f.get("evidence", []) if e.get("kind") == "sample"}
+    for marker in ("ER", "HER2"):
+        ds = [d for d in now_d if d.marker == marker]
+        if not ds:
+            continue
+        old = {(d.sample, d.label) for d in before_d if d.marker == marker}
+        already = [d for d in ds if (d.sample, d.label) in old]
+        linked = sorted({sample_finding[norm_id(d.sample)] for d in ds if norm_id(d.sample) in sample_finding})
+        fid = f"F{len(findings) + 1}"
+        art = "an" if marker == "ER" else "a"
+        summary = (f"{len(ds)} sample(s) carry {art} {marker} label that contradicts their own molecular data "
+                   f"({MARKER_TEXT[marker]}). {len(already)} of them were already like this in release {A}, so a "
+                   "comparison of releases alone could never catch them.")
+        if len(ds) > len(already):
+            k = len(ds) - len(already)
+            summary += f" {k} {'is' if k == 1 else 'are'} new in release {B}"
+            summary += f", and are also part of {', '.join(linked)}." if linked else "."
+        findings.append({
+            "id": fid, "kind": "label_conflict", "summary": summary,
+            "severity": "medium", "confidence": "medium",
+            "evidence": [{"kind": "sample", "id": d.sample, "release": B, "file": "clinical.tsv",
+                          "note": d.evidence + ("" if (d.sample, d.label) in old else f" (new in release {B})")}
+                         for d in ds],
+            "affects_analyses": [], "not_affected_analyses": sorted(impacts),
+            "limitation": "A molecular value far from its labelled group is evidence, not proof: tumor heterogeneity, "
+                          "assay thresholds or a true borderline case can explain it. Driftwire never relabels a sample.",
+            "needs_human_review": True,
+        })
+        label_findings[fid] = ER_COL if marker == "ER" else "HER2_Final_Status_nature2012"
+        repairs.append({"id": f"R{len(repairs) + 1}", "action": "flag_for_review",
+                        "targets": [{"kind": "sample", "id": d.sample, "release": B, "file": "clinical.tsv"} for d in ds],
+                        "justification": f"Ask pathology or the data provider to re-check the {marker} status of these "
+                                         "samples; keep them out of model training until it's confirmed. Proposed only; "
+                                         "never applied automatically.", "addresses": [fid]})
+
     # ---- repair previews: what each repair would do to the analyses if approved (on a copy; nothing applied)
     from .repair_preview import preview
     for r in repairs:
@@ -280,6 +323,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         rel = {change_finding[i] for i in q.pop("relevant_changes") if i in change_finding}
         if card.analysis_id in unexplained_finding:
             rel.add(unexplained_finding[card.analysis_id])
+        rel |= {fid for fid, col in label_findings.items() if card.label == col}
         q["relevant_findings"] = sorted(rel, key=lambda f: int(f[1:]))
         questions.append(q)
     for f in findings:

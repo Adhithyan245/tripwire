@@ -229,6 +229,134 @@
     "predict_er_from_protein"
    ],
    "severity_reason": "It feeds results that are Blocked overall: predict_er_from_protein."
+  },
+  {
+   "id": "F4",
+   "kind": "label_conflict",
+   "summary": "7 sample(s) carry an ER label that contradicts their own molecular data (ER-alpha protein far on the other side of the ER-positive / ER-negative divide). 6 of them were already like this in release raw, so a comparison of releases alone could never catch them. 1 is new in release practice, and are also part of F1.",
+   "severity": "high",
+   "confidence": "medium",
+   "evidence": [
+    {
+     "kind": "sample",
+     "id": "TCGA-AN-A0XS-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-negative, but ER-alpha protein 2.71 is at or above the typical ER-positive level (2.29) and 7.2 robust SDs above ER-negative tumors",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.173068474922207945228071799647244967670/series/1.3.6.1.4.1.5962.99.1.1273826425.105778420.1637656398969.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-AR-A1AH-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-positive, but ER-alpha protein -1.57 is at or below the typical ER-negative level (-1.08) and 3.1 robust SDs below ER-positive tumors",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.31532558235118399499289730591757132356/series/1.3.6.1.4.1.5962.99.1.1236254534.1905616081.1637618827078.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-AR-A1AO-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-positive, but ER-alpha protein -1.57 is at or below the typical ER-negative level (-1.08) and 3.1 robust SDs below ER-positive tumors",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.245091444841616895235277474612787326780/series/1.3.6.1.4.1.5962.99.1.1289957872.1934721442.1637672530416.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-B6-A0WX-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-negative, but ER-alpha protein 3.43 is at or above the typical ER-positive level (2.29) and 8.5 robust SDs above ER-negative tumors (new in release practice)",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.313876930275437405700886098015749945827/series/1.3.6.1.4.1.5962.99.1.1311646388.1333858778.1637694218932.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E2-A1L7-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-negative, but ER-alpha protein 2.35 is at or above the typical ER-positive level (2.29) and 6.5 robust SDs above ER-negative tumors",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.11271546153453351740970927723348427716/series/1.3.6.1.4.1.5962.99.1.1316889727.748575567.1637699462271.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E9-A1N9-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-negative, but ER-alpha protein 2.96 is at or above the typical ER-positive level (2.29) and 7.6 robust SDs above ER-negative tumors",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.67624070536854300970645918293527223955/series/1.3.6.1.4.1.5962.99.1.1211645458.1283306511.1637594218002.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-JL-A3YW-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled ER-positive, but ER-alpha protein -1.69 is at or below the typical ER-negative level (-1.08) and 3.2 robust SDs below ER-positive tumors",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.57619414020243193205302244759412992217/series/1.3.6.1.4.1.5962.99.1.1328343426.135107251.1637710915970.2.0"
+    }
+   ],
+   "affects_analyses": [],
+   "not_affected_analyses": [
+    "A1",
+    "A2"
+   ],
+   "limitation": "A molecular value far from its labelled group is evidence, not proof: tumor heterogeneity, assay thresholds or a true borderline case can explain it. Driftwire never relabels a sample.",
+   "needs_human_review": true,
+   "relevant_questions": [
+    "er_protein_by_er_status",
+    "predict_er_from_protein",
+    "predict_er_from_rna"
+   ],
+   "severity_reason": "It feeds results that are Blocked overall: predict_er_from_protein."
+  },
+  {
+   "id": "F5",
+   "kind": "label_conflict",
+   "summary": "4 sample(s) carry a HER2 label that contradicts their own molecular data (ERBB2 copy number and HER2 protein both on the other side of the HER2 divide). 4 of them were already like this in release raw, so a comparison of releases alone could never catch them.",
+   "severity": "low",
+   "confidence": "medium",
+   "evidence": [
+    {
+     "kind": "sample",
+     "id": "TCGA-A2-A0EQ-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled HER2-positive, but ERBB2 shows no gain (GISTIC 0) and HER2 protein 0.17 is at or below the typical HER2-negative level (0.24)",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.30618737215052435948010355176308371666/series/1.3.6.1.4.1.5962.99.1.1338541434.558642001.1637721113978.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-A8-A08H-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled HER2-positive, but ERBB2 shows no gain (GISTIC 0) and HER2 protein 0.01 is at or below the typical HER2-negative level (0.24)",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.59339704642292551111620922498857491669/series/1.3.6.1.4.1.5962.99.1.1264775720.1366051273.1637647348264.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-AQ-A04L-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled HER2-positive, but ERBB2 shows no gain (GISTIC -1) and HER2 protein -0.04 is at or below the typical HER2-negative level (0.24)",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.3526145419898015750324780538566450501/series/1.3.6.1.4.1.5962.99.1.1276818661.1845191305.1637659391205.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-BH-A18M-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "note": "labelled HER2-positive, but ERBB2 shows no gain (GISTIC 0) and HER2 protein -0.21 is at or below the typical HER2-negative level (0.24)",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.301497510345461075353453625495732388458/series/1.3.6.1.4.1.5962.99.1.1233360997.48530409.1637615933541.2.0"
+    }
+   ],
+   "affects_analyses": [],
+   "not_affected_analyses": [
+    "A1",
+    "A2"
+   ],
+   "limitation": "A molecular value far from its labelled group is evidence, not proof: tumor heterogeneity, assay thresholds or a true borderline case can explain it. Driftwire never relabels a sample.",
+   "needs_human_review": true,
+   "relevant_questions": [],
+   "severity_reason": "It touches no reference analysis or supported research question."
   }
  ],
  "analyses": [
@@ -493,6 +621,109 @@
    "preview": {
     "note": "Nothing to compute: this repair asks a person to check something first."
    }
+  },
+  {
+   "id": "R4",
+   "action": "flag_for_review",
+   "targets": [
+    {
+     "kind": "sample",
+     "id": "TCGA-AN-A0XS-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.173068474922207945228071799647244967670/series/1.3.6.1.4.1.5962.99.1.1273826425.105778420.1637656398969.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-AR-A1AH-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.31532558235118399499289730591757132356/series/1.3.6.1.4.1.5962.99.1.1236254534.1905616081.1637618827078.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-AR-A1AO-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.245091444841616895235277474612787326780/series/1.3.6.1.4.1.5962.99.1.1289957872.1934721442.1637672530416.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-B6-A0WX-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.313876930275437405700886098015749945827/series/1.3.6.1.4.1.5962.99.1.1311646388.1333858778.1637694218932.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E2-A1L7-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.11271546153453351740970927723348427716/series/1.3.6.1.4.1.5962.99.1.1316889727.748575567.1637699462271.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-E9-A1N9-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.67624070536854300970645918293527223955/series/1.3.6.1.4.1.5962.99.1.1211645458.1283306511.1637594218002.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-JL-A3YW-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.57619414020243193205302244759412992217/series/1.3.6.1.4.1.5962.99.1.1328343426.135107251.1637710915970.2.0"
+    }
+   ],
+   "justification": "Ask pathology or the data provider to re-check the ER status of these samples; keep them out of model training until it's confirmed. Proposed only; never applied automatically.",
+   "addresses": [
+    "F4"
+   ],
+   "preview": {
+    "note": "Nothing to compute: this repair asks a person to check something first."
+   }
+  },
+  {
+   "id": "R5",
+   "action": "flag_for_review",
+   "targets": [
+    {
+     "kind": "sample",
+     "id": "TCGA-A2-A0EQ-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.30618737215052435948010355176308371666/series/1.3.6.1.4.1.5962.99.1.1338541434.558642001.1637721113978.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-A8-A08H-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.59339704642292551111620922498857491669/series/1.3.6.1.4.1.5962.99.1.1264775720.1366051273.1637647348264.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-AQ-A04L-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.3526145419898015750324780538566450501/series/1.3.6.1.4.1.5962.99.1.1276818661.1845191305.1637659391205.2.0"
+    },
+    {
+     "kind": "sample",
+     "id": "TCGA-BH-A18M-01",
+     "release": "practice",
+     "file": "clinical.tsv",
+     "url": "https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.301497510345461075353453625495732388458/series/1.3.6.1.4.1.5962.99.1.1233360997.48530409.1637615933541.2.0"
+    }
+   ],
+   "justification": "Ask pathology or the data provider to re-check the HER2 status of these samples; keep them out of model training until it's confirmed. Proposed only; never applied automatically.",
+   "addresses": [
+    "F5"
+   ],
+   "preview": {
+    "note": "Nothing to compute: this repair asks a person to check something first."
+   }
   }
  ],
  "questions": [
@@ -508,7 +739,8 @@
    "label": "breast_carcinoma_estrogen_receptor_status",
    "acceptable_limitations": "Group means can shift slightly; a small move within tolerance is acceptable.",
    "required_checks": [
-    "sample_size"
+    "sample_size",
+    "label_concordance"
    ],
    "problems": [],
    "verdict": "Conditional",
@@ -522,13 +754,65 @@
      "name": "sample_size",
      "status": "pass",
      "summary": "at least 20 labelled samples per class (Positive: 533, Negative: 166)"
+    },
+    {
+     "name": "label_concordance",
+     "status": "fixable",
+     "summary": "7 ER label(s) contradict the sample's own molecular data (TCGA-AN-A0XS-01, TCGA-AR-A1AH-01, TCGA-AR-A1AO-01, TCGA-B6-A0WX-01\u2026)",
+     "evidence": [
+      {
+       "kind": "sample",
+       "id": "TCGA-AN-A0XS-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 2.71 is at or above the typical ER-positive level (2.29) and 7.2 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-AR-A1AH-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-positive, but ER-alpha protein -1.57 is at or below the typical ER-negative level (-1.08) and 3.1 robust SDs below ER-positive tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-AR-A1AO-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-positive, but ER-alpha protein -1.57 is at or below the typical ER-negative level (-1.08) and 3.1 robust SDs below ER-positive tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-B6-A0WX-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 3.43 is at or above the typical ER-positive level (2.29) and 8.5 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-E2-A1L7-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 2.35 is at or above the typical ER-positive level (2.29) and 6.5 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-E9-A1N9-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 2.96 is at or above the typical ER-positive level (2.29) and 7.6 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-JL-A3YW-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-positive, but ER-alpha protein -1.69 is at or below the typical ER-negative level (-1.08) and 3.2 robust SDs below ER-positive tumors"
+      }
+     ],
+     "fix": "have the ER status of these samples re-checked, or leave them out until confirmed"
     }
    ],
    "coverage": {
     "pass": [
      "sample_size"
     ],
-    "fixable": [],
+    "fixable": [
+     "label_concordance"
+    ],
     "insufficient": [],
     "fail": [],
     "skipped": [],
@@ -538,7 +822,8 @@
    "relevant_findings": [
     "F1",
     "F2",
-    "F3"
+    "F3",
+    "F4"
    ]
   },
   {
@@ -670,7 +955,8 @@
    "required_checks": [
     "sample_size",
     "patient_leakage",
-    "site_confounding"
+    "site_confounding",
+    "label_concordance"
    ],
    "problems": [],
    "verdict": "Blocked",
@@ -733,6 +1019,56 @@
       }
      ],
      "fix": "evaluate with whole sites held out, and report performance per site"
+    },
+    {
+     "name": "label_concordance",
+     "status": "fixable",
+     "summary": "7 ER label(s) contradict the sample's own molecular data (TCGA-AN-A0XS-01, TCGA-AR-A1AH-01, TCGA-AR-A1AO-01, TCGA-B6-A0WX-01\u2026)",
+     "evidence": [
+      {
+       "kind": "sample",
+       "id": "TCGA-AN-A0XS-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 2.71 is at or above the typical ER-positive level (2.29) and 7.2 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-AR-A1AH-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-positive, but ER-alpha protein -1.57 is at or below the typical ER-negative level (-1.08) and 3.1 robust SDs below ER-positive tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-AR-A1AO-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-positive, but ER-alpha protein -1.57 is at or below the typical ER-negative level (-1.08) and 3.1 robust SDs below ER-positive tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-B6-A0WX-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 3.43 is at or above the typical ER-positive level (2.29) and 8.5 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-E2-A1L7-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 2.35 is at or above the typical ER-positive level (2.29) and 6.5 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-E9-A1N9-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-negative, but ER-alpha protein 2.96 is at or above the typical ER-positive level (2.29) and 7.6 robust SDs above ER-negative tumors"
+      },
+      {
+       "kind": "sample",
+       "id": "TCGA-JL-A3YW-01",
+       "file": "clinical.tsv",
+       "note": "labelled ER-positive, but ER-alpha protein -1.69 is at or below the typical ER-negative level (-1.08) and 3.2 robust SDs below ER-positive tumors"
+      }
+     ],
+     "fix": "have the ER status of these samples re-checked, or leave them out until confirmed"
     }
    ],
    "coverage": {
@@ -741,7 +1077,8 @@
     ],
     "fixable": [
      "patient_leakage",
-     "site_confounding"
+     "site_confounding",
+     "label_concordance"
     ],
     "insufficient": [],
     "fail": [],
@@ -752,7 +1089,8 @@
    "relevant_findings": [
     "F1",
     "F2",
-    "F3"
+    "F3",
+    "F4"
    ]
   },
   {
@@ -843,7 +1181,8 @@
    "required_checks": [
     "sample_size",
     "patient_leakage",
-    "site_confounding"
+    "site_confounding",
+    "label_concordance"
    ],
    "problems": [
     {
@@ -872,6 +1211,11 @@
      "name": "site_confounding",
      "status": "unavailable",
      "summary": "inputs missing"
+    },
+    {
+     "name": "label_concordance",
+     "status": "unavailable",
+     "summary": "inputs missing"
     }
    ],
    "coverage": {
@@ -883,11 +1227,14 @@
     "unavailable": [
      "sample_size",
      "patient_leakage",
-     "site_confounding"
+     "site_confounding",
+     "label_concordance"
     ],
     "missing": []
    },
-   "relevant_findings": []
+   "relevant_findings": [
+    "F4"
+   ]
   },
   {
    "id": "predict_subtype_from_rna",
@@ -969,8 +1316,8 @@
      "difference": 3.051
     },
     "verdict_if_approved": "Conditional",
-    "summary": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) vs release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.",
-    "why_not_ready": "the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest."
+    "summary": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) vs release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3, R4, R5 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.",
+    "why_not_ready": "the result matches, but it would read 694 samples, release A has 698; R3, R4, R5 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest."
    },
    {
     "analysis": "A2",
@@ -1044,14 +1391,25 @@
     "step": 3
    },
    {
+    "who": "Data provider",
+    "action": "Ask the data provider to explain: 7 sample(s) carry an ER label that contradicts their own molecular data (ER-alpha protein far on the other side of the ER-positive / ER-negative divide)",
+    "why": "Until it's explained, don't build new work on these samples.",
+    "effect": null,
+    "refs": [
+     "R4",
+     "F4"
+    ],
+    "step": 4
+   },
+   {
     "who": "Researcher",
     "action": "Hold: Train a research model to predict ER status from protein (RPPA).",
     "why": "12 detected change(s) touch this question's inputs, including duplicate, swap. For model training that means wrong labels or copies across a train/test split; a curator must review them first.",
-    "effect": "split by patient_id, and remove copied profiles before splitting; evaluate with whole sites held out, and report performance per site",
+    "effect": "split by patient_id, and remove copied profiles before splitting; evaluate with whole sites held out, and report performance per site; have the ER status of these samples re-checked, or leave them out until confirmed",
     "refs": [
      "predict_er_from_protein"
     ],
-    "step": 4
+    "step": 5
    },
    {
     "who": "Researcher",
@@ -1061,7 +1419,28 @@
     "refs": [
      "predict_subtype_from_rna"
     ],
-    "step": 5
+    "step": 6
+   },
+   {
+    "who": "Data provider",
+    "action": "Ask the data provider to explain: 4 sample(s) carry a HER2 label that contradicts their own molecular data (ERBB2 copy number and HER2 protein both on the other side of the HER2 divide)",
+    "why": "Until it's explained, don't build new work on these samples.",
+    "effect": null,
+    "refs": [
+     "R5",
+     "F5"
+    ],
+    "step": 7
+   },
+   {
+    "who": "Researcher",
+    "action": "Before: Does ER-alpha protein differ between ER-positive and ER-negative tumors? have the ER status of these samples re-checked, or leave them out until confirmed",
+    "why": "Computed by A1: Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%)).",
+    "effect": null,
+    "refs": [
+     "er_protein_by_er_status"
+    ],
+    "step": 8
    },
    {
     "who": "Researcher",
@@ -1071,7 +1450,7 @@
     "refs": [
      "predict_subtype_from_copy_number"
     ],
-    "step": 6
+    "step": 9
    },
    {
     "who": "Researcher",
@@ -1081,13 +1460,13 @@
     "refs": [
      "predict_er_from_rna"
     ],
-    "step": 7
+    "step": 10
    }
   ],
-  "all_repairs_together": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) against release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.; A2: largest subtype share shift 0.0 pp (tolerance 1.0 pp) against release raw.",
+  "all_repairs_together": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) against release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3, R4, R5 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.; A2: largest subtype share shift 0.0 pp (tolerance 1.0 pp) against release raw.",
   "cannot_tell": [
    "Why a change happened. Driftwire sees that profiles moved or were copied, not the cause; the data provider has to say.",
-   "Errors already present in release A. A comparison only sees what differs between the two releases.",
+   "Most errors already present in release A. A comparison only sees what differs between the two releases; the one exception is the receptor-label check, which flags ER and HER2 labels that contradict the tumor's own data.",
    "Which of two conflicting values is correct (a relabel shows the old and the new value, not the truth)."
   ]
  },
@@ -1124,7 +1503,7 @@
     "in_b": true
    }
   ],
-  "seconds": 7.5,
+  "seconds": 6.4,
   "generated_by": "scripts/build_replay.py",
   "release_a": "raw",
   "release_b": "practice"

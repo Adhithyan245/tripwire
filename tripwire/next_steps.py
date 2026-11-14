@@ -86,7 +86,7 @@ def build_plan(doc: dict) -> dict:
     cannot = [
         "Why a change happened. Driftwire sees that profiles moved or were copied, not the cause; the data provider "
         "has to say.",
-        "Errors already present in release A. A comparison only sees what differs between the two releases.",
+        "Most errors already present in release A. A comparison only sees what differs between the two releases; the one exception is the receptor-label check, which flags ER and HER2 labels that contradict the tumor's own data.",
         "Which of two conflicting values is correct (a relabel shows the old and the new value, not the truth).",
     ]
     gaps = sorted({c for q in doc.get("questions", []) if not q.get("problems")  # skip questions the data can't answer
