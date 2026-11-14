@@ -1,36 +1,7 @@
-# Blind red-team result
+# Blind red-team: an isolated AI tester edits the practice release
 
-A person who had never seen Driftwire's detector code edited a copy of the practice release by hand, recorded every change in a private answer key, and only shared it after Driftwire had run. Tooling and instructions: [`redteam/README.md`](../redteam/README.md).
+## Answer key locked
 
-## Who planted the changes
-- Name / role:
-- Had they seen the detector code? 
-- Date and time of the run:
-- Driftwire commit:
-
-## What they planted
-| # | File | Change (from their answer key) | Samples / rows / columns |
-| --- | --- | --- | --- |
-| | | | |
-
-## What Driftwire caught
-| Planted # | Driftwire finding | Kind | Verdict impact |
-| --- | --- | --- | --- |
-| | | | |
-
-## What Driftwire missed
-| Planted # | Why it was missed (after investigation) |
-| --- | --- |
-| | |
-
-## False alarms
-| Driftwire finding | Why it was wrong |
-| --- | --- |
-| | |
-
-## Summary
-- Planted changes:
-- Caught:
-- Missed:
-- False alarms:
-- Overall verdict Driftwire gave:
+- File: `../redteam_work/answer_key/answer_key.md` (outside the repo), written by the tester.
+- SHA-256: `86a6c2513d701480859cd17e6a6b68ef129b30e49626b0de817337924b12668b`
+- Locked at: 2026-11-14T18:14:11Z, before Driftwire was run on the edited release and before anyone on the team read the key. The hash was computed without opening the file.
