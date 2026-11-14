@@ -45,8 +45,10 @@ def test_blockers_need_an_id_and_answers():
     assert any("Two columns" in b for b in p.blockers("clinical.tsv", m, [], {}))
 
 
-def test_no_backend_means_ai_unavailable_not_a_crash():
-    assert p._backend() is None  # the separately built backend isn't installed here
+def test_no_backend_means_ai_unavailable_not_a_crash(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)  # without a key the intake backend doesn't load
+    sys.modules.pop("tripwire.prepare", None)
+    assert p._backend() is None
 
 
 def test_prepared_copy_renames_headers_only(tmp_path):
@@ -57,3 +59,34 @@ def test_prepared_copy_renames_headers_only(tmp_path):
     assert rows[1:] == [["TCGA-A1-A0SB-01", "Positive", "LumA", "55"], ["TCGA-A1-A0SD-01", "Negative", "Basal", "61"]]
     r = json.loads(rec.read_text(encoding="utf-8"))
     assert r["rows"] == 2 and r["rows_changed"] == 0 and len(r["header_changes"]) == 3 and "firewall hasn't run" in r["note"]
+
+
+def test_intake_backend_adapter_translates_without_network(monkeypatch):
+    """tripwire.prepare maps intake_prototype's validated output to the view's contract; no API call is made."""
+    import importlib
+    import sys as _sys
+    monkeypatch.setenv("OPENAI_API_KEY", "test-not-a-real-key")
+    _sys.modules.pop("tripwire.prepare", None)
+    prep = importlib.import_module("tripwire.prepare")
+    from prepare_tab import FIELDS
+    out = prep.translate({"valid_mappings": [
+        {"source": "patient", "target": "sampleID", "confidence": "high"},
+        {"source": "er", "target": "breast_carcinoma_estrogen_receptor_status", "confidence": "low"}],
+        "rejected_mappings": [{"source": "x", "target": "bogus"}], "clarification_questions": ["Is er the ER status?"]},
+        FIELDS)
+    assert out["target"] == "clinical.tsv"
+    assert out["mappings"][0] == {"column": "patient", "field": "sampleID", "confidence": 0.95,
+                                  "reason": "AI proposed (high confidence)"}
+    assert out["mappings"][1]["confidence"] < 0.8 and len(out["questions"]) == 2
+    surv = prep.translate({"valid_mappings": [{"source": "id", "target": "sampleID", "confidence": "high"},
+                                              {"source": "t", "target": "OS.time", "confidence": "medium"}]}, FIELDS)
+    assert surv["target"] == "survival.tsv" and {m["field"] for m in surv["mappings"]} == {"sample", "OS.time"}
+    _sys.modules.pop("tripwire.prepare", None)
+
+
+def test_no_key_means_backend_unavailable(monkeypatch):
+    import sys as _sys
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _sys.modules.pop("tripwire.prepare", None)
+    from prepare_tab import _backend
+    assert _backend() is None
