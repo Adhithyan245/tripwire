@@ -155,6 +155,23 @@ result.save("findings.json")
 python -m driftwire diff releases/trusted releases/candidate --fail-on Blocked
 ```
 
+## Re-check any result with one command
+
+Every `findings.json` carries a **receipt**: the Driftwire version and git commit, the question asked, and a SHA-256 of the result. The fingerprint of every input file is already in `data.releases`. Anyone with the same two releases can re-check it:
+
+```bash
+python -m driftwire verify findings.json path/to/release-A path/to/release-B
+```
+
+| Outcome | Meaning | Exit code |
+| --- | --- | --- |
+| **identical** | Same inputs, same result hash | 0 |
+| **same conclusions** | Only numeric detail differs (another machine or library); every verdict and finding is unchanged | 0 |
+| **inputs differ** | Names each file that no longer matches its recorded fingerprint | 5 |
+| **different** | Names each verdict or finding that changed, and says if the file was edited after the run | 5 |
+
+Review decisions are left out of the hash, because they are a person's record added after the run. The output is deterministic: the practice run gives the same result hash in every process.
+
 ## Beyond oncology
 
 Driftwire is built and tested on TCGA-BRCA, but nothing in its approach is specific to cancer. Any medical dataset that ships in versions, such as an ECG cohort, a table of echocardiography measurements or an EHR extract for a cardiac study, can silently swap, copy or drop records between releases. Each new version raises the same question: is it still fit for this analysis, or this model?

@@ -57,7 +57,7 @@ def _group(changes: list[Change]) -> list[list[int]]:
 def _subgroups(ids, clinical) -> str:
     """'4 of 5 Her2; ER: 3 Positive, 2 Negative' from release A clinical labels."""
     c = clinical.assign(_k=clinical["sampleID"].map(norm_id)).set_index("_k")
-    keys = [norm_id(i) for i in ids if norm_id(i) in c.index]
+    keys = [norm_id(i) for i in sorted(ids) if norm_id(i) in c.index]  # sorted: same text in every run
     if not keys:
         return ""
     bits = []
@@ -65,7 +65,7 @@ def _subgroups(ids, clinical) -> str:
         if col in c.columns:
             vals = Counter(str(v) for v in c.loc[keys, col] if isinstance(v, str) and v)
             if vals:
-                bits.append(f"{label}: " + ", ".join(f"{n} {v}" for v, n in vals.most_common()))
+                bits.append(f"{label}: " + ", ".join(f"{n} {v}" for v, n in sorted(vals.items(), key=lambda kv: (-kv[1], kv[0]))))
     return "; ".join(bits)
 
 
@@ -358,7 +358,8 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
     doc["next_steps"] = build_plan(doc)  # what to do next, and what Driftwire can't tell you
     from .sources import add_slide_links
     add_slide_links(doc)  # each cited sample links to its tissue slide in the public IDC viewer
-    return doc
+    from .receipt import stamp
+    return stamp(doc, question)  # anyone with the same releases can re-check this with `driftwire verify`
 
 
 def _rate_severity(f: dict, analyses: dict, questions: dict) -> None:

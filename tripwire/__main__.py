@@ -41,6 +41,10 @@ def main(argv=None):
     r.add_argument("--out", help="default: same name as the findings file, .html")
     d.add_argument("--question", help="question-card id: makes the top-level question and verdict that card's "
                                       "(see `python -m driftwire questions`)")
+    v = sub.add_parser("verify", help="re-check a findings.json: same inputs, same result?")
+    v.add_argument("findings")
+    v.add_argument("release_a", help="the trusted release folder")
+    v.add_argument("release_b", help="the new release folder")
     sub.add_parser("questions", help="list the supported question cards")
     doc_p = sub.add_parser("doctor", help="check the setup and print exactly what to do next")
     doc_p.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
@@ -62,6 +66,14 @@ def main(argv=None):
         return 0
 
 
+    if args.cmd == "verify":
+        from .receipt import verify
+        outcome, details = verify(json.loads(pathlib.Path(args.findings).read_text(encoding="utf-8")),
+                                  args.release_a, args.release_b)
+        print(f"Driftwire verify: {outcome}")
+        for d in details:
+            print(f"  - {d}")
+        return 0 if outcome in ("identical", "same conclusions") else VERIFY_FAILED
     if args.cmd == "doctor":
         from .doctor import run
         return run(args.challenge_dir)
@@ -120,6 +132,7 @@ def main(argv=None):
     return 0
 
 
+VERIFY_FAILED = 5  # verify: the inputs or the result differ from the recorded run
 GATE_FAILED = 4  # only with --fail-on: the release didn't clear the gate (findings were still written)
 ENVELOPE_FAILED = 3  # distinct from 0 (written, valid) and 1 (written, but the validator found problems)
 
