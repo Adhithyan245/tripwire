@@ -73,3 +73,11 @@ def test_restore_preview_does_not_fragment(tmp_path):
         finally:
             rp.Release = orig
     assert sorted(ov.protein.columns) == sorted(a_prot.columns)
+
+
+def test_subgroup_chance_is_corrected_for_the_subtypes_tested():
+    # 8% Her2, 12% Basal, 80% LumA: Her2 and Basal are the rare subtypes the rule tests (at most 25%)
+    clin = _clin(["Her2"] * 8 + ["Basal"] * 12 + ["LumA"] * 80)
+    s = _concentration([f"S{i}" for i in range(5)], clin)
+    expected = round(1 / (0.08 ** 5 + 0.12 ** 5))   # not 1 / 0.08**5, the uncorrected single-subtype figure
+    assert f"1 time in {expected:,}" in s and "2 subtypes tested" in s

@@ -34,6 +34,17 @@ def default_name(path: pathlib.Path) -> str:
     return path.parent.name if path.name == "release" else path.name
 
 
+def _no_duplicate_headers(path: pathlib.Path) -> None:
+    """A clinical header that names the same column twice is ambiguous (pandas would silently rename one): refuse it.
+    Not applied to the molecular files: there a repeated sample-ID column is a change the detector reports."""
+    opener = gzip.open if path.name.endswith(".gz") else open
+    with opener(path, "rt", encoding="utf-8", errors="replace", newline="") as f:
+        cols = f.readline().rstrip(chr(13) + chr(10)).split(chr(9))
+    dup = sorted({c for c in cols if cols.count(c) > 1 and c})
+    if dup:
+        raise ValueError(f"{path.name} names the same column more than once: {', '.join(dup[:5])}")
+
+
 ROW_ID = {"survival.tsv": "sample"}  # sample-ID column of the row-oriented files
 
 
@@ -53,6 +64,7 @@ class Release:
 
     @cached_property
     def clinical(self) -> pd.DataFrame:
+        _no_duplicate_headers(self.path / "clinical.tsv")
         return pd.read_csv(self.path / "clinical.tsv", sep="\t", low_memory=False)
 
     @cached_property
