@@ -5,3 +5,4 @@ The implementation lives in the `tripwire` package (the project's working name);
 `python -m driftwire ...` and `python -m tripwire ...` run the same tool.
 """
 from tripwire import __version__  # noqa: F401
+from tripwire.api import Result, check  # noqa: F401,E402  driftwire.check(trusted, new, question=...)

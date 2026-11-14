@@ -113,7 +113,7 @@ Tolerances and minimum sample counts are prototype policy choices, not clinical 
 
 **Judging day.** The judge gives an envelope number and four words, for example `python -m driftwire envelope 07 amber falcon river quartz`. It opens the envelope with the organizers' own `unseal.py`, compares, validates and writes the report, usually in a few seconds. The envelope has no RNA file by design, and Driftwire doesn't flag that.
 
-Exit codes: **0** means findings were written and the validator passed. **1** means they were written but the validator found problems. **3** means the envelope didn't open, and the last line says why: release A missing, a wrong number or words, or an out-of-date challenge repo. The verdict is in the output, never in the exit code.
+Exit codes: **0** means findings were written and the validator passed. **1** means they were written but the validator found problems. **3** means the envelope didn't open, and the last line says why: release A missing, a wrong number or words, or an out-of-date challenge repo. The verdict is in the output, and only reaches the exit code if you ask for it with `--fail-on` (see below).
 
 **The dashboard** can compare two releases, open a sealed envelope, show a `findings.json` from another tool (upload it: it gets structural checks, and the organizers' validator runs in Data & export), or load a clearly labelled synthetic example. It has these tabs:
 - **Verdicts:** the overall verdict, each research question and each analysis, with before and after values.
@@ -122,6 +122,25 @@ Exit codes: **0** means findings were written and the validator passed. **1** me
 - **What Driftwire can't see:** its blind spots.
 - **Data & export:** a validator check and downloads.
 - **Mutation Lab** (its own view in the sidebar): plant a known change, or run the full scorecard.
+
+## Use it where your data moves
+
+**In a notebook.** One call runs the same engine and returns the same findings.json. In Jupyter the result shows as a readable summary.
+
+```python
+import driftwire
+result = driftwire.check("path/to/release-A", "path/to/release-B", question="predict_er_from_protein")
+result.verdict          # "Blocked" for this question on the practice release
+result.findings         # what changed, with evidence
+result.next_steps       # the ordered plan, and what Driftwire can't tell you
+result.save("findings.json")
+```
+
+**As a release gate in CI.** Add `--fail-on Blocked` (or `Conditional`) and a run exits **4** when the verdict is that or worse. findings.json and the report are still written for a person to review. Without the flag, the verdict never changes the exit code. [`docs/ci/driftwire-gate.yml`](docs/ci/driftwire-gate.yml) is a ready-made GitHub Actions workflow: it checks every pull request that changes a release, and attaches the findings to the run.
+
+```bash
+python -m driftwire diff releases/trusted releases/candidate --fail-on Blocked
+```
 
 ## Troubleshooting
 
