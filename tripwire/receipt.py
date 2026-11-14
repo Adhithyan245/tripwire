@@ -86,7 +86,7 @@ def verify(recorded: dict, trusted: str, new: str) -> tuple[str, list[str]]:
     hash_of = ["content" if any(f.get("hash_of") == "content" for f in r["files"]) else "file" for r in rels]
     again = build(detect_changes(a, b), a, b, hash_of[0], hash_of[1], question=rec.get("question"))
     if result_sha256(again) == rec["result_sha256"] and not edited:
-        return "identical", [f"result sha256 {rec['result_sha256'][:16]}… reproduced"]
+        return "identical", [f"result sha256 {rec['result_sha256'][:16]}... reproduced"]
     c1, c2 = conclusions(recorded), conclusions(again)
     if c1 == c2 and not edited:
         return "same conclusions", ["every verdict and finding is unchanged; only numeric detail differs "
