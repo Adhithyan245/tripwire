@@ -26,10 +26,10 @@ Building the synthetic pair took another 19.7 s, which isn't counted above.
 - The copy-number and mutation files were not scaled. At 10x they would be about 250 to 320 million cells each, so their time and memory at that size are unmeasured.
 - The concordance finding is an artefact of resampling: labels are copied with each resampled sample, so the label-versus-protein mix differs from real data. It is not evidence about real samples.
 
-## A gap found along the way (verdict logic, not changed)
+## A gap found along the way (now fixed)
 
 The first attempt used IDs that weren't barcode-shaped (`TCGA-ZZ-000016-01`, six digits), so no sample counted as a primary tumor:
-- **A2 came back Ready while reading 0 samples.** An empty cohort should be Insufficient Evidence, not Ready.
+- **A2 came back Ready while reading 0 samples.**
 - A1's result was NaN, and Driftwire reported it as Blocked ("moved"), so that case failed closed.
 
-Fixing the A2 case needs a change in verdict or analysis logic (`verdicts.py` / `analyses.py`), which was out of bounds for this work. Proposed fix: return Insufficient Evidence whenever an analysis's cohort is empty in either release.
+**Fixed:** an analysis whose cohort is empty in either release is now reported as Insufficient Evidence ("no samples in its cohort"), and so are the question cards computed from it. It is never Ready. See `test_empty_cohort_is_insufficient_evidence_not_ready` in `tests/test_malformed_inputs.py`. The practice result is unchanged.
