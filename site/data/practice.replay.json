@@ -72,7 +72,7 @@
   {
    "id": "F1",
    "kind": "sample_swap",
-   "summary": "Profiles of TCGA-A8-A09K-01 and TCGA-B6-A0WX-01 in protein_rppa.tsv.gz appear exchanged between releases. Affected samples by release-A labels: subtype: 1 LumA, 1 Basal; ER: 1 Positive, 1 Negative.",
+   "summary": "Profiles of TCGA-A8-A09K-01 and TCGA-B6-A0WX-01 in protein_rppa.tsv.gz appear exchanged between releases. Affected samples by release-A labels: subtype: 1 Basal, 1 LumA; ER: 1 Negative, 1 Positive.",
    "severity": "high",
    "confidence": "high",
    "evidence": [
@@ -1470,6 +1470,14 @@
    "Which of two conflicting values is correct (a relabel shows the old and the new value, not the truth)."
   ]
  },
+ "receipt": {
+  "tool": "Driftwire 0.1.0",
+  "commit": "9680a54b344ba26f12d5b520387ce6b58f58f470",
+  "question": null,
+  "inputs": "the sha256 of every input file is in data.releases",
+  "result_sha256": "e612c917c726c97c8fef3a7d2fc7a99867d0f2c3b66ba1a8826e866d582d15d5",
+  "verify": "python -m driftwire verify findings.json <trusted release> <new release>"
+ },
  "replay": {
   "files": [
    {
@@ -1503,7 +1511,7 @@
     "in_b": true
    }
   ],
-  "seconds": 6.4,
+  "seconds": 6.5,
   "generated_by": "scripts/build_replay.py",
   "release_a": "raw",
   "release_b": "practice"
