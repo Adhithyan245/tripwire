@@ -1,5 +1,9 @@
 # Role 3 QA: integrated run
 
+## Controlled incident evidence
+
+[INCIDENT_EVIDENCE.md](INCIDENT_EVIDENCE.md) adds a reproducible, literature-motivated QA experiment using a seeded synthetic swap, a count-only comparison, a no-change control, question-dependent outcomes and a ground-truth recovery. It measures partner accuracy separately and validates all three findings documents. It is a simulation, not a reproduction of an identified historical incident or a claim of superiority to an existing tool. Reproduce with `python scripts/qa/incident_replay.py <release-A> --seed 42 --out out/incident-replay-seed42`.
+
 ## Saturday retest after fixes (11:16 AM ET)
 
 Tested Driftwire `6a34c5b550096246438c96fa2395d543cc42098f` with organizer commit `6e15a399a64ffbf80778db0b462ac239e70086b9` using the existing local environment and data. This is a retest, not a new fresh-clone timing. The two malformed-input crash regressions reported below were fixed in #44 and now pass without expected-failure markers. Full suite: **265 passed**, one pandas performance warning. The practice envelope was already open; comparison wrote findings in 3.4 seconds, the organizer validator returned `valid`, and the new `driftwire verify` reported `identical` on a separate rerun. Mutation Lab: **20/20** scenarios exactly matched with seed 7 in 31.3 seconds. Its generated cases are development tests, and the score does not verify partner or evidence correctness. Gitleaks scanned 44 reachable commits through `6a34c5b` and found no leaks. Repeat validation and Gitleaks on the final submitted commit.
