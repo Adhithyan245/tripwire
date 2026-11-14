@@ -33,6 +33,9 @@ def main(argv=None):
     d.add_argument("--no-verify-unaffected", action="store_true", help="don't rerun analyses the impact map says are unaffected")
     d.add_argument("--challenge-dir", help="path to the challenge repo (for the validator)")
     d.add_argument("--no-report", action="store_true", help="don't write the HTML report next to findings.json")
+    d.add_argument("--fail-on", choices=["Conditional", "Insufficient Evidence", "Blocked"],
+                   help="for CI: exit 4 when the verdict is this or worse (Ready < Conditional < Insufficient Evidence "
+                        "< Blocked). Without it the exit code never depends on the verdict")
     r = sub.add_parser("report", help="write the human-readable HTML report for an existing findings.json")
     r.add_argument("findings")
     r.add_argument("--out", help="default: same name as the findings file, .html")
@@ -48,6 +51,7 @@ def main(argv=None):
     e.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
     e.add_argument("--out", help="default: out/findings-<envelope>.json")
     e.add_argument("--question", help="question-card id, as for diff")
+    e.add_argument("--fail-on", choices=["Conditional", "Insufficient Evidence", "Blocked"], help="as for diff")
     args = p.parse_args(argv)
 
     if args.cmd == "report":
@@ -105,9 +109,18 @@ def main(argv=None):
     if not args.no_report:
         from .report import write_report
         print(f"  report: {write_report(doc, out.with_suffix('.html'))}")
-    return 1 if errs else 0
+    if errs:
+        return 1
+    if args.fail_on:
+        from .config import VERDICT_ORDER
+        if VERDICT_ORDER.index(doc["verdict"]) >= VERDICT_ORDER.index(args.fail_on):
+            print(f"  gate: verdict {doc['verdict']} is at or above --fail-on {args.fail_on} -> exit {GATE_FAILED}")
+            return GATE_FAILED
+        print(f"  gate: verdict {doc['verdict']} is below --fail-on {args.fail_on} -> pass")
+    return 0
 
 
+GATE_FAILED = 4  # only with --fail-on: the release didn't clear the gate (findings were still written)
 ENVELOPE_FAILED = 3  # distinct from 0 (written, valid) and 1 (written, but the validator found problems)
 
 
@@ -164,6 +177,7 @@ def envelope(args) -> int:
     release_a = root / "data" / "tcga-brca" / "raw"
     out = args.out or f"out/findings-{name}.json"
     extra = ["--question", args.question] if args.question else []
+    extra += ["--fail-on", args.fail_on] if args.fail_on else []
     return main(["diff", str(release_a), str(opened), "--out", out, "--challenge-dir", str(root), *extra])
 
 
