@@ -55,11 +55,22 @@ def touches(ch: Change, a: Analysis, eligible: set[str]) -> tuple[bool, str]:
     return True, ""
 
 
+def _eligible(a: Analysis, r: Release) -> set[str]:
+    """The analysis cohort in one release, or empty when that release lacks its inputs. A missing file or field
+    is reported later as Insufficient Evidence with the reason (findings.build); it must not crash the map."""
+    if not all(r.has(f) for f in a.files):
+        return set()
+    try:
+        return a.eligible(r)
+    except (KeyError, ValueError, OSError):
+        return set()
+
+
 def map_impact(changes: list[Change], release_a: Release, release_b: Release,
                analyses: list[Analysis] = ANALYSES) -> dict[str, Impact]:
     out = {}
     for a in analyses:
-        eligible = a.eligible(release_a) | a.eligible(release_b)
+        eligible = _eligible(a, release_a) | _eligible(a, release_b)
         imp = Impact(a)
         for i, ch in enumerate(changes):
             hit, reason = touches(ch, a, eligible)

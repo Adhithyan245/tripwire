@@ -34,6 +34,9 @@ def default_name(path: pathlib.Path) -> str:
     return path.parent.name if path.name == "release" else path.name
 
 
+ROW_ID = {"survival.tsv": "sample"}  # sample-ID column of the row-oriented files
+
+
 class Release:
     def __init__(self, path, name: str | None = None):
         self.path = pathlib.Path(path)
@@ -59,7 +62,11 @@ class Release:
     def _matrix(self, name: str) -> pd.DataFrame:
         """A molecular file with each feature row kept once. A repeated feature row (two ERALPHA rows, say) is
         ambiguous: it's remembered in repeated_features so the detector reports it, and only the first copy is used."""
-        df = pd.read_csv(self.path / name, sep="\t", index_col=0)
+        if name in ROW_ID:  # one row per sample: index by the named ID column wherever it sits in the header
+            df = pd.read_csv(self.path / name, sep="\t")
+            df = df.set_index(ROW_ID[name] if ROW_ID[name] in df.columns else df.columns[0])
+        else:
+            df = pd.read_csv(self.path / name, sep="\t", index_col=0)
         dup = df.index[df.index.duplicated()]
         if len(dup):
             self.__dict__.setdefault("repeated_features", {})[name] = sorted({str(x) for x in dup})

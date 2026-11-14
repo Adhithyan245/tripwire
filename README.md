@@ -61,6 +61,37 @@ You own a dataset that gets new releases. A new release can keep the same number
 
 *Research use only. No diagnosis, treatment advice, risk score or clinical claim.*
 
+## Judges: run on your own data
+
+**A sealed envelope:** `python -m driftwire envelope <number> <four words>`.
+
+**Any two folders:** check the layout first, then compare.
+
+```bash
+python -m driftwire inspect <trusted-folder> <new-folder>
+python -m driftwire diff <trusted-folder> <new-folder> --out out/findings.json
+```
+
+`inspect` changes nothing. It lists each file's role, rows and columns, and sample-ID column, then which analyses and question cards can run and, for any that can't, what's missing. On the practice release:
+
+```text
+  clinical.tsv                   clinical      1247 rows x 194 columns    sample IDs: sampleID
+  protein_rppa.tsv.gz            protein       131 rows x 748 columns     sample IDs: column headers
+  ...
+    predict_er_from_rna                cannot run: rna_hiseq.tsv.gz is not in this folder
+```
+
+**The dashboard:** `streamlit run app/dashboard.py`, then sidebar → View: **Run on your data**. You can give two folder paths (no size limit), upload files (up to 200 MB each), or enter a sealed envelope. Pick a question, press **Check layout**, then **Run**. Run calls the same code as the CLI: on the practice release, both give result SHA-256 `e612c917c726c97c…` (this is tested). Everything runs on your machine, and nothing is uploaded anywhere.
+
+**On data that isn't laid out like TCGA-BRCA:** A1, A2 and the question cards are written for the TCGA-BRCA layout and its file names. On other data, detection still runs on every file it recognizes. Anything that can't run says **Insufficient Evidence** and names the missing file or field; it is never **Ready** because its inputs were absent. For example, here is a release without its protein file:
+
+```text
+Driftwire: raw -> noprot   overall verdict: Insufficient Evidence
+  A1  Insufficient Evidence  Missing input file(s): ['clinical.tsv', 'protein_rppa.tsv.gz']
+```
+
+A folder that doesn't exist, or a file that can't be read, gives a one-line message and exit code 2 instead of a traceback.
+
 ## Quickstart (about 5 minutes)
 
 You need Python 3.11+ and git. The two repos sit side by side:
@@ -179,7 +210,7 @@ Tolerances and minimum sample counts are prototype policy choices, not clinical 
 
 **Judging day.** The judge gives an envelope number and four words, for example `python -m driftwire envelope 07 amber falcon river quartz`. It opens the envelope with the organizers' own `unseal.py`, compares, validates and writes the report, usually in a few seconds. The envelope has no RNA file by design, and Driftwire doesn't flag that.
 
-Exit codes: **0** means findings were written and the validator passed. **1** means they were written but the validator found problems. **3** means the envelope didn't open, and the last line says why: release A missing, a wrong number or words, or an out-of-date challenge repo. The verdict is in the output, and only reaches the exit code if you ask for it with `--fail-on` (see below).
+Exit codes: **0** means findings were written and the validator passed. **1** means they were written but the validator found problems. **2** means a folder is missing or a file can't be read (nothing is written; run `inspect`). **3** means the envelope didn't open, and the last line says why: release A missing, a wrong number or words, or an out-of-date challenge repo. The verdict is in the output, and only reaches the exit code if you ask for it with `--fail-on` (see below).
 
 **The dashboard** can compare two releases, open a sealed envelope, show a `findings.json` from another tool (upload it: it gets structural checks, and the organizers' validator runs in Data & export), or load a clearly labelled synthetic example. It has these tabs:
 - **Verdicts:** the overall verdict, each research question and each analysis, with before and after values.
@@ -187,6 +218,7 @@ Exit codes: **0** means findings were written and the validator passed. **1** me
 - **Review:** approve, reject or request more evidence on each proposed repair, with a reason. This is saved into `findings.json`; nothing is applied.
 - **What Driftwire can't see:** its blind spots.
 - **Data & export:** a validator check and downloads.
+- **Run on your data** (its own view in the sidebar): two folders, uploads or an envelope, a layout check, and the CLI's own run. See [Judges: run on your own data](#judges-run-on-your-own-data).
 - **Mutation Lab** (its own view in the sidebar): plant a known change, or run the full scorecard.
 
 ## What a review decision does (and doesn't) change

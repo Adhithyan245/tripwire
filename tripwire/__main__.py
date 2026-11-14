@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import textwrap
@@ -48,6 +49,8 @@ def main(argv=None):
     vt = sub.add_parser("verdicts", help="one release, every question card: verdict and written reason as a table")
     vt.add_argument("release_a")
     vt.add_argument("release_b")
+    ins = sub.add_parser("inspect", help="check a release folder's layout: file roles, sizes, and what can run")
+    ins.add_argument("folders", nargs="+")
     sub.add_parser("questions", help="list the supported question cards")
     doc_p = sub.add_parser("doctor", help="check the setup and print exactly what to do next")
     doc_p.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
@@ -69,6 +72,11 @@ def main(argv=None):
         return 0
 
 
+    if args.cmd == "inspect":
+        from .inspect import inspect_folder, print_report
+        for folder in args.folders:
+            print_report(inspect_folder(folder))
+        return 0
     if args.cmd == "verdicts":
         from .api import check
         print(verdict_table(check(args.release_a, args.release_b).doc))
@@ -95,14 +103,22 @@ def main(argv=None):
         return envelope(args)
 
     t0 = time.time()
-    a, b = Release(args.release_a, args.name_a), Release(args.release_b, args.name_b)
-    if args.changes:
-        changes = load_changes(args.changes)
-    else:
-        from .detect import detect_changes
-        changes = detect_changes(a, b)
-    doc = build(changes, a, b, args.hash_a, args.hash_b, verify_unaffected=not args.no_verify_unaffected,
-                question=args.question)
+    try:
+        a, b = Release(args.release_a, args.name_a), Release(args.release_b, args.name_b)
+        if args.changes:
+            changes = load_changes(args.changes)
+        else:
+            from .detect import detect_changes
+            changes = detect_changes(a, b)
+        doc = build(changes, a, b, args.hash_a, args.hash_b, verify_unaffected=not args.no_verify_unaffected,
+                    question=args.question)
+    except Exception as e:  # noqa: BLE001  unreadable input: a plain message, not a traceback
+        if os.environ.get("DRIFTWIRE_DEBUG"):
+            raise
+        print(f"Driftwire couldn't compare these folders: {input_error(e)}", file=sys.stderr)
+        print(f"  Check the layout first: python -m driftwire inspect {args.release_a} {args.release_b}",
+              file=sys.stderr)
+        return INPUT_ERROR
 
     out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -151,6 +167,7 @@ def verdict_table(doc: dict) -> str:
     return chr(10).join(rows)
 
 
+INPUT_ERROR = 2  # diff: a folder is missing or a file can't be read (nothing written)
 VERIFY_FAILED = 5  # verify: the inputs or the result differ from the recorded run
 GATE_FAILED = 4  # only with --fail-on: the release didn't clear the gate (findings were still written)
 ENVELOPE_FAILED = 3  # distinct from 0 (written, valid) and 1 (written, but the validator found problems)
@@ -172,6 +189,15 @@ def unseal_hint(output: str) -> str:
     if "no module named" in o:
         return "A package is missing: pip install -r requirements.txt (python -m driftwire doctor checks this)."
     return "See the organizers' message above for the reason."
+
+
+def input_error(e: Exception) -> str:
+    """One plain sentence for an input problem."""
+    if isinstance(e, FileNotFoundError):
+        return str(e) if "release folder not found" in str(e) else f"a file is missing: {getattr(e, 'filename', e)}"
+    if isinstance(e, ValueError) and "unknown question card" in str(e):
+        return str(e)
+    return f"a file couldn't be read ({type(e).__name__}: {str(e)[:200]})"
 
 
 def envelope(args) -> int:
