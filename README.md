@@ -4,6 +4,52 @@
 
 OncoSys AI Healthcare Hackathon, Nov 2026 · Team **Skill issue** · Track 1, Cohort Firewall · Product: Cohort Control Tower
 
+## Judge quickstart (under 2 minutes once installed)
+
+**Requirements:** Python 3.11 or newer and git. Tested from a fresh clone on Windows 11 with Python 3.11.0 ([full record](docs/clean_clone_run.md)); our QA also ran it on macOS with Python 3.13.
+
+First, clone the organizers' repo and this one side by side, then work from `tripwire/`:
+`git clone https://github.com/disleveK/oncosys-hackathon-challenge oncosys-challenge && git clone https://github.com/Adhithyan245/tripwire tripwire && cd tripwire`. A virtual environment is recommended ([setup](#quickstart-about-5-minutes)).
+
+```bash
+pip install -r requirements.txt && python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna
+```
+```bash
+python -m driftwire doctor
+```
+```bash
+python -m driftwire envelope practice orange meadow pilot lantern
+```
+
+**Expected output** of the last command (14 s on our laptop, including unsealing). From the real run:
+
+```
+Driftwire: raw -> practice   overall verdict: Conditional
+  A1  Conditional            Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%)).
+  A2  Ready                  Nothing this analysis uses changed: the 844 samples it reads are identical in both releases; ...
+  Questions:
+   er_protein_by_er_status            Conditional
+   subtype_mix                        Ready
+   os_by_subtype                      Ready
+   predict_er_from_protein            Blocked
+   predict_subtype_from_copy_number   Conditional
+   predict_er_from_rna                Insufficient Evidence
+   predict_subtype_from_rna           Blocked
+  5 finding(s), 5 proposed repair(s) (none applied)
+  format/validate.py: valid
+```
+
+**What it means:** the practice release has the same sample counts as the trusted one, yet Driftwire finds a swap, 5 copied profiles, 5 samples that lost data, and receptor labels that contradict their own data. A1 still holds within tolerance and A2 is untouched. The same release is **Ready** for the subtype-mix and survival questions, but **Blocked** for training a model on protein, because the model would train on swapped and copied profiles. Re-check the result with `python -m driftwire verify out/findings-practice.json ../oncosys-challenge/data/tcga-brca/raw ../oncosys-challenge/envelopes/opened/practice/release` ("identical" in our fresh-clone run).
+
+**See also:**
+- [Live site](https://driftwire.vercel.app)
+- Demo video: VIDEO_LINK_TBD
+- [Seven verdicts on one release](#same-release-different-answers)
+- [One finding traced end to end](docs/trace_example.md)
+- [What the verdicts mean](#what-the-verdicts-mean)
+- [Full setup](#quickstart-about-5-minutes)
+- [Fresh-clone record](docs/clean_clone_run.md)
+
 **Live site: [driftwire.vercel.app](https://driftwire.vercel.app)**. Step through a real run on the practice release: the scan, the findings with review, the question cards and what to do next. You can also drop any Driftwire `findings.json` on it.
 
 You own a dataset that gets new releases. A new release can keep the same number of samples while some are swapped, copied or dropped, and a count check won't notice. Point Driftwire at the old release (A) and the new one (B). It:
@@ -53,7 +99,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-On Windows: `py -3.11 -m venv .venv` then `.venv\Scriptsctivate`. Once it's active, `python` means the right
+On Windows: `py -3.11 -m venv .venv` then `.venv\Scripts\activate`. Once it's active, `python` means the right
 version for every command below.
 
 ```bash
@@ -83,6 +129,24 @@ python -m driftwire envelope practice orange meadow pilot lantern
 ```bash
 streamlit run app/dashboard.py
 ```
+
+## Same release, different answers
+
+One practice release, seven research questions, and four different verdicts, each with its written reason. Reproduce it with `python -m driftwire verdicts ../oncosys-challenge/data/tcga-brca/raw ../oncosys-challenge/envelopes/opened/practice/release`.
+
+| Question | Use | Verdict | Driftwire's reason |
+| --- | --- | --- | --- |
+| Does ER-alpha protein differ between ER-positive and ER-negative tumors? | describe the data | **Conditional** | Computed by A1: Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%)). |
+| What is the PAM50 subtype mix of primary tumors? | describe the data | **Ready** | Computed by A2: Nothing this analysis uses changed: the 844 samples it reads are identical in both releases; a check rerun confirms it (largest subtype share shift 0.0 pp (tolerance 1.0 pp)). |
+| Does overall survival differ between PAM50 subtypes? | describe the data | **Ready** | Nothing this question reads changed between releases. |
+| Train a research model to predict ER status from protein (RPPA). | train a model | **Blocked** | 12 detected change(s) touch this question's inputs, including duplicate, swap. |
+| Train a research model to predict PAM50 subtype from copy number. | train a model | **Conditional** | site_confounding: label vs tissue source site: Cramer's V = 0.19 over 17 site groups (831 samples; sites under 10 pooled). |
+| Train a research model to predict ER status from RNA expression. | train a model | **Insufficient Evidence** | This data can't answer the question: rna_hiseq.tsv.gz is not in release practice. |
+| Train a research model to predict PAM50 subtype from RNA expression. | train a model | **Blocked (circular)** | Circular question: the label PAM50Call_RNAseq was computed from rna_hiseq.tsv.gz, the same data this model would use as input, so it would mostly re-learn the labelling algorithm. |
+
+The same data passes for describing subtypes and survival, but training a model on protein is **Blocked**: the swapped and copied profiles would become wrong labels and leak across a train/test split. Saved in [docs/verdict_table.md](docs/verdict_table.md).
+
+To follow one finding through every link, from the sample IDs and file fingerprints to the before and after values, the analyses and questions it touches, the repair and the tissue slides, see [docs/trace_example.md](docs/trace_example.md) (the sample swap, F1).
 
 ## What the verdicts mean
 
@@ -124,6 +188,15 @@ Exit codes: **0** means findings were written and the validator passed. **1** me
 - **What Driftwire can't see:** its blind spots.
 - **Data & export:** a validator check and downloads.
 - **Mutation Lab** (its own view in the sidebar): plant a known change, or run the full scorecard.
+
+## What a review decision does (and doesn't) change
+
+A reviewer approves, rejects or asks for more evidence on each proposed repair, giving a role and a reason. On the practice run, approving R1 (restore the swapped pair) did this:
+- **Changes:** a `decisions` entry is added to `findings.json` (`original_preserved: true`), and the open-review list drops from F1–F5 to F2–F5. The HTML report gains a "Review decisions" table.
+- **Doesn't change:** the overall verdict (Conditional), any analysis or question verdict, the findings, or the "what to do next" plan. Verdicts describe the data as delivered, and the data itself is never changed.
+- **What approval *would* do** is shown before deciding, in the repair preview. For R1: A1 moves from 3.019 back to 3.054 (0.1% from release A).
+
+Repair previews are sized against A1 and A2, the organizers' reference analyses. They aren't yet propagated to the question-card verdicts.
 
 ## It also checks the labels themselves
 

@@ -51,3 +51,16 @@ def test_decisions_pass_the_official_validator(doc):
     rid = doc["repairs"][0]["id"]
     new = apply_decisions(doc, {rid: {"decision": "approve", "reason": "matches lab notes", "reviewer_role": "curator"}})
     assert validate(new) == []
+
+
+def test_a_decision_is_a_record_and_never_changes_a_verdict(doc):
+    """By design: review records who decided what and why; verdicts describe the data as delivered."""
+    from tripwire.next_steps import build_plan
+    rid = doc["repairs"][0]["id"]
+    new = apply_decisions(doc, {rid: {"decision": "approve", "reason": "confirmed", "reviewer_role": "curator"}})
+    assert new["decisions"][0]["original_preserved"] is True
+    assert new["verdict"] == doc["verdict"]
+    assert [a["verdict"] for a in new["analyses"]] == [a["verdict"] for a in doc["analyses"]]
+    assert [q["verdict"] for q in new["questions"]] == [q["verdict"] for q in doc["questions"]]
+    assert new["findings"] == doc["findings"] and build_plan(new) == build_plan(doc)
+    assert len(review_status(new)["open"]) == len(review_status(doc)["open"]) - 1

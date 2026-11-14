@@ -26,6 +26,26 @@ def _marks() -> tuple[str, str, str]:
         return "OK", "X", "!"
 
 
+def macos_ssl_fix(platform: str | None = None, ca_count: int | None = None,
+                  version: tuple[int, int] | None = None) -> str | None:
+    """On macOS, Python from python.org ships without root certificates, so fetch.py fails with
+    CERTIFICATE_VERIFY_FAILED. Returns the exact one-line fix, or None when there is no problem.
+    Arguments exist only so the check can be tested on any OS."""
+    platform = platform or sys.platform
+    if platform != "darwin":
+        return None
+    if ca_count is None:
+        import ssl
+        try:
+            ca_count = ssl.create_default_context().cert_store_stats().get("x509_ca", 0)
+        except Exception:  # noqa: BLE001  any failure to load certificates is the problem we look for
+            ca_count = 0
+    if ca_count > 0:
+        return None
+    major, minor = version or sys.version_info[:2]
+    return f'open "/Applications/Python {major}.{minor}/Install Certificates.command"'
+
+
 def run(explicit_challenge: str | None = None) -> int:
     OK, NO, WARN = _marks()
     ok = True
@@ -65,6 +85,10 @@ def run(explicit_challenge: str | None = None) -> int:
         needed = [f for f in expected if f != "rna_hiseq.tsv.gz"]
         absent = [f for f in needed if not (raw / f).exists()]
         if absent:
+            ssl_fix = macos_ssl_fix()
+            if ssl_fix:  # the download would fail before it starts: say so, with the exact command
+                bad("this Python has no root certificates, so fetch.py will fail with CERTIFICATE_VERIFY_FAILED",
+                    ssl_fix)
             bad(f"release A not fetched ({len(absent)} file(s) missing)",
                 f"python {root / 'data' / 'tcga-brca' / 'fetch.py'} --no-rna")
         else:
