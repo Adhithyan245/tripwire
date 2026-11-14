@@ -37,19 +37,19 @@ Open <http://localhost:8501>, skip the tour if it appears, and press **Practice 
 
 The public site <https://driftwire.vercel.app/> replays recorded practice output. It does not run the detector in the browser. If recording it, say “recorded practice replay.” To run the same website locally, open a second terminal at the repository root and run `python -m http.server 8765 --directory site`, then visit <http://localhost:8765>.
 
-## 4. Record a 90-second walkthrough
+## 4. Record our 90-second film: “One release. Two decisions.”
 
-Record the screen at 1080p, with readable browser zoom and notifications hidden. Use the local dashboard for these steps:
+The creative idea is a question, not a feature tour: a researcher asks two different questions of the same release, and the evidence leads to two different decisions. Start with the contrast, then show the evidence and the human who acts on it. Use the local dashboard for the actual comparison. Record at 1080p with readable browser zoom and notifications hidden; use short, steady cuts, minimal on-screen text and clear narration. No fabricated alerts, sample results or historical-incident claims.
 
 | Time | Show | Narration |
 | --- | --- | --- |
-| 0:00–0:12 | Dashboard introduction; then press **Practice demo** | “The new release looks the same by count, but samples can move or disappear underneath. Driftwire checks what changed and which questions depend on it.” |
-| 0:12–0:28 | Overall verdict and A1/A2 in **Verdicts** | “In this practice release, A1’s ER-alpha difference moves from 3.051 to 3.019, about 1%, within our prototype’s 5% tolerance. A1 is Conditional; the subtype analysis is Ready.” |
-| 0:28–0:43 | In **Verdicts**, show subtype mix Ready and ER-from-protein training Blocked | “The same release can support one question and block another. A model trained on swapped or copied profiles risks learning from the wrong labels.” |
-| 0:43–1:00 | **Findings & evidence**, then **Review** for the swap | “The findings show the affected files and evidence. A curator can approve, reject, or ask for evidence with a reason. Driftwire does not apply repairs.” |
-| 1:00–1:14 | Sidebar **View → Mutation Lab**; select `mixed_changes`, seed 42, press **Plant and detect** | “In a controlled test we plant a swap, duplicate, missing profile and label change, then score detection against known truth.” Show the actual result and any misses. |
-| 1:14–1:24 | Terminal: run the `verify` command from step 2 | “The receipt lets another person rerun the comparison and check that the result is reproducible.” |
-| 1:24–1:30 | **What Driftwire can't see** | “A comparison needs a trusted baseline. Most errors already shared by both releases can remain invisible.” |
+| 0:00–0:10 | Open on the practice **Verdicts** tab; frame the Ready subtype question and Blocked protein-model question | “One dataset. Two research questions. One is ready; the other is blocked. Why?” |
+| 0:10–0:24 | Move to **Findings & evidence** and open the swap | “A new release can keep the same sample count while profiles move between samples. Driftwire compares the releases and shows the evidence behind the warning.” |
+| 0:24–0:38 | Show A1’s before/after values and return briefly to the two question verdicts | “The ER-alpha difference moves from 3.051 to 3.019, within our prototype’s 5% tolerance. But a model trained on swapped profiles risks learning from the wrong labels.” |
+| 0:38–0:53 | Open **Review** for the swap; show the preview and record a reasoned decision | “A curator sees the proposed action, its preview and the uncertainty. The decision is recorded; Driftwire never applies the repair.” |
+| 0:53–1:08 | Sidebar **View → Mutation Lab**; choose `mixed_changes`, seed 42, press **Plant and detect** | “We can challenge our detector: plant a swap, duplicate, missing profile and label change, then compare what it finds with known truth.” Show the actual score. |
+| 1:08–1:22 | Terminal: run the `verify` command from step 2 | “Every result carries a receipt. Someone with the same inputs can rerun the comparison and check the result.” |
+| 1:22–1:30 | Return to **What Driftwire can't see** | “A comparison still depends on a trusted baseline. Driftwire makes the next decision visible—and leaves it with a person.” |
 
 If timing is tight, record the Mutation Lab separately and cut it into the video. Do not describe it as the judges' unseen test or claim it proves real-world accuracy.
 
