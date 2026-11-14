@@ -79,3 +79,5 @@ The result hash `e612c917c726c97c...` is the same one produced on the developmen
 - The Windows activation command was garbled (`.venv\Scripts` followed by a control character). It now reads `.venv\Scripts\activate`.
 - The quickstart didn't mention `verify`. The judge quickstart at the top of the README now includes it.
 - `doctor` now detects a macOS Python without root certificates *before* `fetch.py` fails, and prints the exact command: `open "/Applications/Python 3.X/Install Certificates.command"`.
+
+**Later change (Nov 14):** the subgroup-chance sentence in one finding's summary is now corrected for the number of subtypes tested (it was an uncorrected single-subtype figure). That text is part of the result, so the practice result SHA-256 is now `116597cde5b275fe373795724d6faec83b878ac608d82499cbf82c4a59e1cf15`. The hash above is the record of that earlier run.

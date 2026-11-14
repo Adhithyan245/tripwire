@@ -1,5 +1,7 @@
 # Driftwire
 
+Driftwire (repo and package folder: tripwire)
+
 **Same sample count, different data. Driftwire tells you what changed, what it breaks, and what it can't see.**
 
 OncoSys AI Healthcare Hackathon, Nov 2026 · Team **Skill issue** · Track 1, Cohort Firewall · Product: Cohort Control Tower
@@ -49,6 +51,7 @@ Driftwire: raw -> practice   overall verdict: Conditional
 - [What the verdicts mean](#what-the-verdicts-mean)
 - [Full setup](#quickstart-about-5-minutes)
 - [Fresh-clone record](docs/clean_clone_run.md)
+- [Blind red-team](docs/blind_redteam.md): an isolated AI tester planted 7 errors and 2 benign edits. Driftwire caught 2 by type, flagged 5 generically, missed 0, and raised 0 false alarms.
 
 **Live site: [driftwire.vercel.app](https://driftwire.vercel.app)**. Step through a real run on the practice release: the scan, the findings with review, the question cards and what to do next. You can also drop any Driftwire `findings.json` on it.
 
@@ -81,7 +84,7 @@ python -m driftwire diff <trusted-folder> <new-folder> --out out/findings.json
     predict_er_from_rna                cannot run: rna_hiseq.tsv.gz is not in this folder
 ```
 
-**The dashboard:** `streamlit run app/dashboard.py`, then sidebar → View: **Run on your data**. You can give two folder paths (no size limit), upload files (up to 200 MB each), or enter a sealed envelope. Pick a question, press **Check layout**, then **Run**. Run calls the same code as the CLI: on the practice release, both give result SHA-256 `e612c917c726c97c…` (this is tested). Everything runs on your machine, and nothing is uploaded anywhere.
+**The dashboard:** `streamlit run app/dashboard.py`, then sidebar → View: **Run on your data**. You can give two folder paths (no size limit), upload files (up to 200 MB each), or enter a sealed envelope. Pick a question, press **Check layout**, then **Run**. Run calls the same code as the CLI: on the practice release, both give result SHA-256 `116597cde5b275fe…` (this is tested). Everything runs on your machine, and nothing is uploaded anywhere.
 
 **On data that isn't laid out like TCGA-BRCA:** A1, A2 and the question cards are written for the TCGA-BRCA layout and its file names. On other data, detection still runs on every file it recognizes. Anything that can't run says **Insufficient Evidence** and names the missing file or field; it is never **Ready** because its inputs were absent. For example, here is a release without its protein file:
 

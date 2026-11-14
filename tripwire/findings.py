@@ -82,10 +82,15 @@ def _concentration(ids, clinical, min_n: int = 3, max_share: float = 0.25) -> st
     sub, share = vals[0], float((lab == vals[0]).mean())
     if share > max_share:
         return ""
-    odds = share ** len(vals)
-    return (f"All {len(vals)} are {sub}, a subtype that is {share:.1%} of labelled samples in release A; by chance that would happen about "
-            f"1 time in {round(1 / odds):,}, so this change hit one subgroup. Questions that count or compare "
-            f"subtypes are hit hardest.")
+    # Corrected for the subgroups this rule tests: under random draws (with replacement), the chance that all n
+    # affected samples share ANY one subtype at or under max_share is the sum of share**n over those subtypes.
+    shares = lab.value_counts(normalize=True)
+    odds = float(sum(x ** len(vals) for x in shares if x <= max_share))
+    return (f"All {len(vals)} are {sub}, a subtype that is {share:.1%} of labelled samples in release A. If the "
+            f"affected samples were random, all {len(vals)} sharing any one subtype this rare (at most "
+            f"{max_share:.0%} of samples; {sum(shares <= max_share)} subtypes tested) would happen about 1 time in "
+            f"{round(1 / odds):,}, so this change hit one subgroup. Questions that count or compare subtypes are hit "
+            f"hardest.")
 
 
 def _summary(kind: str, chs: list[Change], file: str, sub: str, count_note: str) -> str:
