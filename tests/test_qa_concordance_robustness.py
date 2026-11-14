@@ -9,7 +9,6 @@ from tripwire.findings import build
 from tripwire.release import Release
 
 
-@pytest.mark.xfail(strict=True, reason="normalized duplicate clinical IDs crash label concordance")
 def test_normalized_duplicate_clinical_id_does_not_crash_workflow(tmp_path):
     a, clinical, protein = _clean(tmp_path)
     duplicate = clinical.iloc[[0]].copy()
@@ -21,7 +20,6 @@ def test_normalized_duplicate_clinical_id_does_not_crash_workflow(tmp_path):
     assert doc["verdict"] != "Ready"
 
 
-@pytest.mark.xfail(strict=True, reason="duplicate marker rows crash the comparison workflow")
 def test_duplicate_marker_row_does_not_crash_workflow(tmp_path):
     a, clinical, protein = _clean(tmp_path)
     b = tmp_path / "B"

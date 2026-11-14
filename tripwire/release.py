@@ -54,7 +54,17 @@ class Release:
 
     @cached_property
     def protein(self) -> pd.DataFrame:
-        return pd.read_csv(self.path / "protein_rppa.tsv.gz", sep="\t", index_col=0)
+        return self._matrix("protein_rppa.tsv.gz")
+
+    def _matrix(self, name: str) -> pd.DataFrame:
+        """A molecular file with each feature row kept once. A repeated feature row (two ERALPHA rows, say) is
+        ambiguous: it's remembered in repeated_features so the detector reports it, and only the first copy is used."""
+        df = pd.read_csv(self.path / name, sep="\t", index_col=0)
+        dup = df.index[df.index.duplicated()]
+        if len(dup):
+            self.__dict__.setdefault("repeated_features", {})[name] = sorted({str(x) for x in dup})
+            df = df[~df.index.duplicated(keep="first")]
+        return df
 
     def sample_ids(self, name: str) -> list[str]:
         """Sample IDs of a molecular file from its header line only (fast for large files). Cached."""
@@ -74,7 +84,7 @@ class Release:
             return self.protein
         cache = self.__dict__.setdefault("_tables", {})
         if name not in cache:
-            cache[name] = pd.read_csv(self.path / name, sep="\t", index_col=0)
+            cache[name] = self._matrix(name)
         return cache[name]
 
     def fingerprints(self, hash_of: str = "file") -> list[dict]:
