@@ -35,7 +35,8 @@ def default_name(path: pathlib.Path) -> str:
 
 
 def _no_duplicate_headers(path: pathlib.Path) -> None:
-    """A header that names the same column twice is ambiguous (pandas would silently rename one): refuse it."""
+    """A clinical header that names the same column twice is ambiguous (pandas would silently rename one): refuse it.
+    Not applied to the molecular files: there a repeated sample-ID column is a change the detector reports."""
     opener = gzip.open if path.name.endswith(".gz") else open
     with opener(path, "rt", encoding="utf-8", errors="replace", newline="") as f:
         cols = f.readline().rstrip(chr(13) + chr(10)).split(chr(9))
@@ -73,7 +74,6 @@ class Release:
     def _matrix(self, name: str) -> pd.DataFrame:
         """A molecular file with each feature row kept once. A repeated feature row (two ERALPHA rows, say) is
         ambiguous: it's remembered in repeated_features so the detector reports it, and only the first copy is used."""
-        _no_duplicate_headers(self.path / name)
         if name in ROW_ID:  # one row per sample: index by the named ID column wherever it sits in the header
             df = pd.read_csv(self.path / name, sep="\t")
             df = df.set_index(ROW_ID[name] if ROW_ID[name] in df.columns else df.columns[0])
