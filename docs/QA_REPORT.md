@@ -1,5 +1,16 @@
 # Role 3 QA: integrated run
 
+## Saturday November 14 QA (10:28–10:31 AM ET)
+
+Fresh macOS clone tested Driftwire `5e21febc1393e3656438766e1a6618a4711fb3c6` and organizer repo `6e15a399a64ffbf80778db0b462ac239e70086b9`, Python 3.13.12, new venv and five checksum-verified no-RNA files. Package downloads used the existing pip cache. The README data-fetch command initially failed with `CERTIFICATE_VERIFY_FAILED` at 22.37 seconds from the start; the README's `SSL_CERT_FILE`/certifi workaround succeeded with certificate verification enabled. Resuming from that point took 14.61 seconds through doctor, practice envelope and the organizer validator (`valid`). The sum of measured segments was 36.98 seconds **excluding the pause to diagnose and restart**; this is not an uninterrupted clean-clone time. The practice command itself took 5.60 seconds wall time, including 1.6 seconds reported for unsealing; system load and network/cache conditions affect these figures.
+
+- **Mutation Lab:** 20/20 existing scenarios exact for seed 1 in 32.0 seconds, with no extra/missed sample/type/file matches or execution errors. These are known synthetic development cases, not a held-out benchmark; partner accuracy and explanation accuracy are not scored. The vanished-file case contributes 1,080 records, so pooled counts are dominated by that one scenario.
+- **Tests:** 258 passed, one pandas fragmentation warning, before adding the two new expected-failure tests described below. The previously reported open swap-chain regression is fixed in #38; its tests now pass.
+- **Gitleaks:** `gitleaks git --no-banner --redact --log-opts=HEAD .` at `5e21feb` scanned 39 reachable commits and found no leaks. Repeat on the final submission commit; subsequent commits have not been scanned by this run.
+- **New robustness gaps:** two wholly synthetic malformed releases cause the full detection/findings workflow to fail. A clinical row with a case-variant duplicate sample ID triggers an `IndexError` when the new label-concordance check aligns normalized labels; a duplicate ERALPHA marker row causes a `ValueError` during comparison (calling the concordance check separately raises `TypeError`). Both are reproducible in `tests/test_qa_concordance_robustness.py`, marked strict expected failures until fixed. Report ambiguous repeated IDs/rows for review or as insufficient evidence rather than silently choosing a value; do not crash or assert a clean result.
+
+This checks a Saturday morning commit, not necessarily the final submitted commit. Re-run the focused tests, validator and Gitleaks after fixes or other changes, and verify the submitted commit and judging access.
+
 ## Independent adversarial checks (November 13, Friday)
 
 Driftwire code commit `fc43279` was tested against the organizer's checksum-verified, five-file no-RNA release A. Mutation Lab ran all 20 existing scenario types with seeds 11, 29 and 47: **60/60 exact runs**, no reported extras, misses or execution errors, in 51.6 seconds on this Mac. Exact means matching change type, file and sample, not evidence accuracy or partner correctness. These are generated development cases, not held-out judge inputs; the vanished-file case contributes 1,080 sample-level records per run.
