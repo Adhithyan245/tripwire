@@ -196,6 +196,8 @@ A reviewer approves, rejects or asks for more evidence on each proposed repair, 
 - **Doesn't change:** the overall verdict (Conditional), any analysis or question verdict, the findings, or the "what to do next" plan. Verdicts describe the data as delivered, and the data itself is never changed.
 - **What approval *would* do** is shown before deciding, in the repair preview. For R1: A1 moves from 3.019 back to 3.054 (0.1% from release A).
 
+Repair previews are sized against A1 and A2, the organizers' reference analyses. They aren't yet propagated to the question-card verdicts.
+
 ## It also checks the labels themselves
 
 A comparison between releases can't see an error that was already in the trusted release. Driftwire adds one check that can: **receptor labels that contradict the tumor's own molecular data.** ER and HER2 status decide treatment and trial eligibility (rules such as "ER ≥ 1%" read exactly these labels), and a mislabelled sample silently corrupts any model or cohort built on it.
