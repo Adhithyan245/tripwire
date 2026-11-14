@@ -25,6 +25,7 @@
     ["findings", "Findings", '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/>'],
     ["questions", "Questions", '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6"/><circle cx="12" cy="17" r=".6"/>'],
     ["next", "Next steps", '<path d="M5 7l2 2 3-3M5 15l2 2 3-3"/><path d="M13 8h6M13 16h6"/>'],
+    ["ask", "Ask", '<path d="M4 5h16v11H9l-5 4z"/><path d="M9.5 9.2a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5"/><circle cx="12" cy="14.6" r=".5"/>'],
   ];
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -135,7 +136,7 @@
     scanToken++;
     const v = $("view"); v.replaceChildren();
     if (!doc) { v.append(h("div", { class: "card pad" }, "Loading the recorded run…")); return; }
-    ({ run: viewRun, scan: viewScan, findings: viewFindings, questions: viewQuestions, next: viewNext })[name](v);
+    ({ run: viewRun, scan: viewScan, findings: viewFindings, questions: viewQuestions, next: viewNext, ask: viewAsk })[name](v);
     updateBell();
     v.focus({ preventScroll: true }); scrollTo({ top: 0 });
   }
@@ -547,7 +548,8 @@
       "An ordered plan for the people involved, most serious first. Steps tick themselves when you record a review decision.", h("div", {}, pill(doc.verdict))),
       h("div", { class: "nextgrid" },
         h("div", { class: "card pad enter" }, h("div", { class: "eyebrow", style: "margin-bottom:6px" }, `What to do next · ${done} of ${steps.length} done`), list,
-          ns.all_repairs_together ? h("div", { class: "together" }, h("b", {}, "If every proposed repair were approved: "), ns.all_repairs_together) : null),
+          ns.all_repairs_together ? h("div", { class: "together" }, h("b", {}, "If every proposed repair were approved: "), ns.all_repairs_together) : null,
+          receiptCard()),
         h("div", { class: "card pad enter", style: "animation-delay:.08s" }, h("div", { class: "eyebrow" }, "Review"),
           h("div", { class: "meter2" }, h("span", { style: `width:${reps.length ? (decided / reps.length) * 100 : 100}%` })),
           h("div", { class: "stat" }, h("span", {}, "Repairs decided"), h("b", {}, `${decided} / ${reps.length}`)),
@@ -562,6 +564,134 @@
   }
   function cantIcon() {
     return icon('<rect x="4" y="5" width="16" height="15" rx="2.5" fill="none" stroke="var(--ink-2)" stroke-width="1.5"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4" stroke="var(--ink-2)" stroke-width="1.5" stroke-linecap="round"/><circle cx="17.5" cy="17.5" r="4.2" fill="var(--ready)"/><path d="m15.6 17.6 1.3 1.3 2.4-2.6" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13h5M8 16h3" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"/>');
+  }
+
+  // ---------- receipt ----------
+  function receiptCard() {
+    const r = doc.receipt;
+    if (!r || !r.result_sha256) return null;
+    const [a, b] = relNames();
+    const cmd = `python -m driftwire verify findings.json <${a} folder> <${b} folder>`;
+    return h("div", { class: "receipt" },
+      h("div", { class: "eyebrow" }, "Reproducibility receipt"),
+      h("div", { class: "rhash mono", title: r.result_sha256 }, `result sha256 ${r.result_sha256.slice(0, 16)}…`),
+      h("div", { class: "rmeta" }, `${r.tool}${r.commit ? " · commit " + r.commit.slice(0, 7) : ""}. Every input file's fingerprint is recorded too.`),
+      h("div", { class: "rcmd mono" }, cmd),
+      h("div", { class: "rmeta" }, "Anyone with the same two releases runs this and gets “identical”, or a list of exactly what differs."));
+  }
+
+  // ---------- ask ----------
+  // Every answer is assembled from this run's findings.json. Nothing is generated, so nothing can be made up.
+  function qaEntries() {
+    const out = [];
+    const link = (label, route, focus) => h("a", { class: "cite", href: `#${route}`, onclick: (e) => {
+      e.preventDefault();
+      if (route === "findings" && focus) { location.hash = "findings"; setTimeout(() => { $("view").replaceChildren(); viewFindings($("view"), focus); }, 0); }
+      else go(route);
+    } }, label);
+    const add = (q, keys, answer, cites) => out.push({ q, keys: keys.map((k) => String(k).toLowerCase()), answer, cites: cites || [] });
+
+    const [a, b] = relNames();
+    add(`What changed between ${a} and ${b}?`, ["changed", "what changed", "summary", "overview", "findings"],
+      () => [h("p", {}, `${doc.findings.length} finding(s). Overall verdict: `, pill(doc.verdict), "."),
+             h("ul", {}, doc.findings.map((f) => h("li", {}, h("b", {}, `${f.id} ${kindName(f.kind)}: `), f.summary)))],
+      doc.findings.map((f) => link(f.id, "findings", f.id)));
+
+    for (const f of doc.findings) {
+      const ids = samplesOf(f).map((e) => e.id);
+      add(`Which samples are in ${f.id} (${kindName(f.kind).toLowerCase()})?`,
+          [f.id, f.kind.replace(/_/g, " "), kindName(f.kind), ...ids, "which samples", "samples"],
+          () => [h("p", {}, f.summary), ids.length ? h("p", {}, h("b", {}, "Samples: "), ids.join(", ")) : null,
+                 f.severity_reason ? h("p", {}, h("b", {}, `Why ${f.severity} severity: `), f.severity_reason) : null,
+                 f.limitation ? h("p", { class: "muted" }, `What it can't know: ${f.limitation}`) : null],
+          [link(`Open ${f.id}`, "findings", f.id)]);
+    }
+
+    for (const an of doc.analyses) {
+      add(`What happened to ${an.id} (${an.title})?`, [an.id, an.title, "analysis", "tolerance", "rerun"],
+          () => [h("p", {}, pill(an.verdict), " ", an.why), an.impact ? h("p", {}, an.impact) : null],
+          [link("See the scan", "scan")]);
+    }
+
+    for (const q of doc.questions || []) {
+      add(`Why is “${q.title}” ${q.verdict}?`, [q.id.replace(/_/g, " "), q.title, q.verdict, q.intended_use || "", q.label || ""],
+          () => [h("p", {}, pill(q.verdict)), h("p", {}, q.why),
+                 (q.checks || []).length ? h("ul", {}, q.checks.map((c) => h("li", {}, h("b", {}, `${c.name.replace(/_/g, " ")} (${c.status}): `), c.summary || ""))) : null],
+          [link("Question cards", "questions")]);
+    }
+
+    const train = (doc.questions || []).filter((q) => q.intended_use === "model_training");
+    if (train.length) {
+      add("Is this release ready to train a model?", ["train", "model", "training", "machine learning", "ready"],
+          () => [h("p", {}, "It depends on the model. Driftwire's verdict for each training question on this release:"),
+                 h("ul", {}, train.map((q) => h("li", {}, pill(q.verdict), " ", q.title, " ", h("span", { class: "muted" }, firstSentence(q.why)))))],
+          [link("Question cards", "questions")]);
+    }
+
+    const steps = (doc.next_steps || {}).steps || [];
+    if (steps.length) {
+      add("What should I do next?", ["next", "do next", "plan", "action"],
+          () => [h("ol", {}, steps.map((st) => h("li", {}, h("b", {}, `${st.who}: `), st.action)))],
+          [link("Next steps", "next")]);
+    }
+    const cant = (doc.next_steps || {}).cannot_tell || [];
+    if (cant.length) {
+      add("What can't Driftwire tell me?", ["can't", "cannot", "limits", "limitation", "blind spot", "not tell"],
+          () => [h("ul", {}, cant.map((c) => h("li", {}, c)))], [link("Next steps", "next")]);
+    }
+    if (doc.receipt && doc.receipt.result_sha256) {
+      add("How do I re-check this result?", ["verify", "reproduce", "re-check", "recheck", "receipt", "hash", "trust"],
+          () => [receiptCard()], [link("Next steps", "next")]);
+    }
+    const reps = doc.repairs || [];
+    if (reps.length) {
+      add("What would the proposed repairs change?", ["repair", "repairs", "approve", "preview", "fix"],
+          () => [h("ul", {}, reps.map((r) => h("li", {}, h("b", {}, `${r.id} (${ACTION[r.action] || r.action}): `),
+                    (r.preview && (r.preview.analyses || []).map((x) => x.summary).join(" ")) || (r.preview && r.preview.note) || r.justification))),
+                 (doc.next_steps || {}).all_repairs_together ? h("p", {}, h("b", {}, "All together: "), doc.next_steps.all_repairs_together) : null,
+                 h("p", { class: "muted" }, "Nothing is ever applied: a person approves or rejects each repair.")],
+          [link("Review findings", "findings")]);
+    }
+    return out;
+  }
+
+  function answerFor(text, entries) {
+    const t = text.toLowerCase().trim();
+    if (!t) return null;
+    let best = null, bestScore = 0;
+    for (const e of entries) {
+      let score = e.q.toLowerCase() === t ? 100 : 0;
+      for (const k of e.keys) if (k && t.includes(k)) score += k.length > 3 ? 3 : 1;
+      for (const w of t.split(/\W+/).filter((x) => x.length > 3)) if (e.q.toLowerCase().includes(w)) score += 1;
+      if (score > bestScore) { best = e; bestScore = score; }
+    }
+    return bestScore >= 2 ? best : null;
+  }
+
+  function viewAsk(v) {
+    const entries = qaEntries();
+    const box = h("div", { class: "answers", "aria-live": "polite" });
+    const show = (e, asked) => {
+      const parts = e
+        ? [h("div", { class: "eyebrow", style: "margin-top:12px" }, "From this run's findings.json"),
+           h("div", { class: "abody" }, e.answer()),
+           e.cites.length ? h("div", { class: "cites" }, h("span", { class: "muted" }, "Evidence: "), e.cites) : null]
+        : [h("p", {}, "I can only answer from this run's findings.json, and nothing in it matches that. Try one of the questions above, a finding ID like F1, or a sample ID.")];
+      box.prepend(h("div", { class: "card pad answer enter" }, h("div", { class: "eyebrow" }, "You asked"), h("div", { class: "asked" }, asked), ...parts));
+    };
+    const input = h("input", { class: "askin", type: "text", placeholder: "Ask about this run, e.g. why is training blocked?", "aria-label": "Ask about this run" });
+    const ask = () => { const t = input.value.trim(); if (!t) return; show(answerFor(t, entries), t); input.value = ""; };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") ask(); });
+    const suggested = [entries[0], ...entries.filter((e) => /train a model|do next|can't|re-check|repairs/i.test(e.q)),
+                       ...entries.filter((e) => e.q.startsWith("Why is")).slice(0, 4), ...entries.filter((e) => e.q.startsWith("Which samples")).slice(0, 2)]
+      .filter((e, i, arr) => e && arr.indexOf(e) === i);
+    v.append(head("Ask", "Ask about this run",
+      "Every answer is put together from this run's findings.json, with links to the evidence. No AI writes anything, so an answer can't say something the data doesn't."),
+      h("div", { class: "card pad enter" },
+        h("div", { class: "askrow" }, input, h("button", { class: "btn navy", type: "button", onclick: ask }, "Ask")),
+        h("div", { class: "chiprow" }, suggested.map((e) => h("button", { class: "qchip", type: "button", onclick: () => show(e, e.q) }, e.q)))),
+      box, footer());
+    setTimeout(() => input.focus(), 50);
   }
 
   function footer() {
