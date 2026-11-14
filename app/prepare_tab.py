@@ -136,8 +136,22 @@ def prepare_copy(data: bytes, name: str, target: str, mapping: dict[str, str], o
 
 # ---------------------------------------------------------------- the screens
 
+TWO_AGENT = "Two-agent workflow (experimental)"
+TWO_AGENT_FORMS = "Two-agent, step-by-step forms (fallback)"
+
+
 def render(st, html, ui) -> None:
     ss = st.session_state
+    mode = st.radio("Mode", [TWO_AGENT, "Manual preparation", TWO_AGENT_FORMS], horizontal=True,
+                    key="prep_mode_select")
+    if mode in (TWO_AGENT, TWO_AGENT_FORMS):
+        try:
+            from app import agent_intake_tab, chat_intake_tab
+        except ImportError:
+            import agent_intake_tab
+            import chat_intake_tab
+        (chat_intake_tab if mode == TWO_AGENT else agent_intake_tab).render(st, html, ui)
+        return
     step = ss.setdefault("prep_step", 1)
     html(f'<div class="tw-cm"><b>Prepare data with AI</b> · step {step} of 4: '
          + " → ".join(f"<b>{t}</b>" if i + 1 == step else t
