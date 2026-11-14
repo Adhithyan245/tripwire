@@ -90,7 +90,9 @@ def _mixed_changes(source: Path, target: Path, seed: int) -> list[Change]:
                 shutil.rmtree(candidate)
             else:
                 raise ValueError("not enough distinct samples for mixed mutations")
-        shutil.move(str(current), str(target))
+        if target.exists():
+            raise FileExistsError(f"target already exists: {target}")
+        current.rename(target)
     return truth
 
 
