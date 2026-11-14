@@ -101,7 +101,11 @@ def _summary(kind: str, chs: list[Change], file: str, sub: str, count_note: str)
         "label_change": lambda: f"{n} sample(s) changed value in {file} ({', '.join(sorted({f for c in chs for f in c.fields}))[:120]}).",
         "sample_type_change": lambda: f"{n} sample(s) changed sample-type code in {file}.",
         "id_format_change": lambda: f"{n} sample ID(s) in {file} changed case or whitespace.",
-        "value_shift": lambda: f"{n} sample(s) in {file} changed values without a swap or copy.",
+        "value_shift": lambda: (f"{n} sample(s) in {file} changed values. {sum('one-way transfer' in c.evidence for c in chs)} "
+                                "of them now carry another sample's previous profile while that sample's own profile changed "
+                                "too, and nothing moved back: a one-way transfer, not a confirmed swap."
+                                if any("one-way transfer" in c.evidence for c in chs) else
+                                f"{n} sample(s) in {file} changed values without a swap or copy."),
         "coverage_loss": lambda: (f"{chs[0].evidence[0].upper() + chs[0].evidence[1:]}: all {n} sample(s) lost it."
                                   if " removed from the new release's " in chs[0].evidence else
                                   f"Missing data rose in {file} for {n} sample(s)."),
@@ -217,6 +221,8 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
             "limitation": LIMITATION[kind], "needs_human_review": True,
         })
         action, rside, just = REPAIR[kind]
+        if kind == "value_shift" and any("one-way transfer" in c.evidence for c in chs):
+            just = "Ask the data provider whether these profiles were moved on purpose; keep them out until confirmed."
         rname = A if rside == "A" else B
         # A swap's repair covers both samples; any other repair covers only the changed samples. In particular,
         # excluding duplicates must never touch the original they were copied from.

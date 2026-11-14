@@ -131,6 +131,11 @@ def unseal_hint(output: str) -> str:
 
 def envelope(args) -> int:
     """Unseal with the organizers' script, then run the normal diff on the opened release."""
+    for stream in (sys.stdout, sys.stderr):  # unseal.py prints check marks; never crash on a cp1252 pipe or console
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     import os
     import subprocess
 
