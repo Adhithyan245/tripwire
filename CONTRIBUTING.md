@@ -1,4 +1,4 @@
-# How we work on Tripwire
+# How we work on Driftwire
 
 [PLAN.md](PLAN.md) is the source of truth: what we build, who owns what, the timeline and the cut order. These rules exist so four people can work in parallel without breaking each other's work or drifting off the plan.
 
@@ -41,7 +41,7 @@ A **plan change** is anything that alters:
 
 How to propose one:
 
-1. Open an issue with the **Plan change proposal** template. Say what changes, why it makes Tripwire score better or run more reliably, what it costs in hours, and who it affects.
+1. Open an issue with the **Plan change proposal** template. Say what changes, why it makes Driftwire score better or run more reliably, what it costs in hours, and who it affects.
 2. Every affected role owner replies **approve** or **object, because …**. The repo owner makes the final call.
 3. Accepted: update `PLAN.md` (and `docs/CONTRACT.md` if needed) in the same PR as the code, and link the issue.
 4. Rejected or no answer: the plan stands. Don't merge work that depends on it.

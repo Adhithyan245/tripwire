@@ -1,0 +1,420 @@
+"""Turn changes + impact + reruns into findings.json (shared format v0.2). Repairs are proposals only."""
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+
+from . import __version__
+from .analyses import ANALYSES, ER_COL, PAM50_COL, missing_inputs, public, slice_diff
+from .config import CONFIG, worst
+from .contract import Change, norm_id
+from .impact import _eligible, map_impact
+from .release import Release
+from .verdicts import release_verdict
+
+FEATURE_KIND = {"protein_rppa.tsv.gz": "protein", "mutation_gene_level.tsv.gz": "gene",
+                "copy_number_gistic.tsv.gz": "gene", "rna_hiseq.tsv.gz": "gene"}
+
+BASE_SEVERITY = {"swap": "high", "duplicate": "high", "label_change": "high", "sample_type_change": "high",
+                 "appeared": "medium", "disappeared": "medium", "value_shift": "medium",
+                 "coverage_loss": "medium", "id_format_change": "low"}
+
+LIMITATION = {
+    "swap": "A swap is inferred from two profiles trading places between releases; the release doesn't say why.",
+    "duplicate": "Identical or near-identical profiles strongly suggest copies, not new measurements.",
+    "appeared": "New samples may be legitimate additions; Driftwire can't tell additions from substitutions on its own.",
+    "disappeared": "A dropped sample may be a deliberate withdrawal; ask the data provider.",
+    "label_change": "Driftwire sees that the value changed, not which value is correct.",
+    "sample_type_change": "The sample-type code changed, which moves the sample in or out of primary-tumor cohorts.",
+    "id_format_change": "Same sample under a reformatted ID; exact-match joins will silently drop it.",
+    "value_shift": "Values moved without a swap or copy; could be a unit or normalisation change.",
+    "coverage_loss": "Coverage dropped for a subgroup; per-subgroup results using this file are affected.",
+}
+
+REPAIR = {
+    "swap": ("restore_from_previous_release", "A", "Restore both profiles as they were in {A} until the swap is explained."),
+    "duplicate": ("exclude", "B", "Exclude the duplicated profiles from analyses that read {file}."),
+    "appeared": ("flag_for_review", "B", "Confirm with the data provider that these samples are genuine additions."),
+    "disappeared": ("flag_for_review", "A", "Ask the data provider why these samples lost data in {file}."),
+    "label_change": ("restore_from_previous_release", "A", "Keep the {A} values until the change is confirmed."),
+    "sample_type_change": ("restore_from_previous_release", "A", "Keep the {A} sample-type codes until the change is confirmed."),
+    "id_format_change": ("relabel", "B", "Map the reformatted IDs back to their {A} form."),
+    "value_shift": ("flag_for_review", "B", "Check units and normalisation of {file} for these samples."),
+    "coverage_loss": ("flag_for_review", "A", "Ask the data provider why this subgroup lost coverage in {file}."),
+}
+
+
+def _group(changes: list[Change]) -> list[list[int]]:
+    """Swaps: one finding per pair. Everything else: one finding per (type, file)."""
+    by_key: dict[tuple, list[int]] = defaultdict(list)  # insertion-ordered
+    for i, ch in enumerate(changes):
+        key = (ch.change_type, ch.file)
+        if ch.change_type == "swap":
+            key += (frozenset({norm_id(ch.sample_id), norm_id(ch.related_sample_id or ch.sample_id)}),)
+        by_key[key].append(i)
+    return list(by_key.values())
+
+
+def _subgroups(ids, clinical) -> str:
+    """'4 of 5 Her2; ER: 3 Positive, 2 Negative' from release A clinical labels."""
+    c = clinical.assign(_k=clinical["sampleID"].map(norm_id)).set_index("_k")
+    keys = [norm_id(i) for i in sorted(ids) if norm_id(i) in c.index]  # sorted: same text in every run
+    if not keys:
+        return ""
+    bits = []
+    for col, label in ((PAM50_COL, "subtype"), (ER_COL, "ER")):
+        if col in c.columns:
+            vals = Counter(str(v) for v in c.loc[keys, col] if isinstance(v, str) and v)
+            if vals:
+                bits.append(f"{label}: " + ", ".join(f"{n} {v}" for v, n in sorted(vals.items(), key=lambda kv: (-kv[1], kv[0]))))
+    return "; ".join(bits)
+
+
+def _concentration(ids, clinical, min_n: int = 3, max_share: float = 0.25) -> str:
+    """One sentence when every affected sample shares a rare subtype: a change that picks out one subgroup is not
+    random, and it matters most for questions that count or compare subgroups."""
+    if PAM50_COL not in clinical.columns:
+        return ""
+    lab = clinical.assign(_k=clinical["sampleID"].map(norm_id)).drop_duplicates("_k").set_index("_k")[PAM50_COL]
+    lab = lab[lab.map(lambda v: isinstance(v, str) and bool(v))]
+    vals = [lab[norm_id(i)] for i in ids if norm_id(i) in lab.index]
+    if len(vals) < min_n or len(set(vals)) != 1:
+        return ""
+    sub, share = vals[0], float((lab == vals[0]).mean())
+    if share > max_share:
+        return ""
+    # Corrected for the subgroups this rule tests: under random draws (with replacement), the chance that all n
+    # affected samples share ANY one subtype at or under max_share is the sum of share**n over those subtypes.
+    shares = lab.value_counts(normalize=True)
+    odds = float(sum(x ** len(vals) for x in shares if x <= max_share))
+    return (f"All {len(vals)} are {sub}, a subtype that is {share:.1%} of labelled samples in release A. If the "
+            f"affected samples were random, all {len(vals)} sharing any one subtype this rare (at most "
+            f"{max_share:.0%} of samples; {sum(shares <= max_share)} subtypes tested) would happen about 1 time in "
+            f"{round(1 / odds):,}, so this change hit one subgroup. Questions that count or compare subtypes are hit "
+            f"hardest.")
+
+
+def _summary(kind: str, chs: list[Change], file: str, sub: str, count_note: str) -> str:
+    n = len(chs)
+    ids = sorted({c.sample_id for c in chs})
+    s = {
+        "swap": lambda: f"Profiles of {chs[0].sample_id} and {chs[0].related_sample_id or '?'} in {file} appear exchanged between releases.",
+        "duplicate": lambda: (f"{n} sample ID(s) listed more than once in {file}, so their data would be counted twice."
+                              if all("sample ID appears" in c.evidence for c in chs) else
+                              f"{n} sample(s) in {file} carry profiles identical or near-identical to other samples."),
+        "appeared": lambda: f"{n} sample(s) appear in {file} that were not in the previous release.",
+        "disappeared": lambda: f"{n} sample(s) lost their data in {file}.",
+        "label_change": lambda: f"{n} sample(s) changed value in {file} ({', '.join(sorted({f for c in chs for f in c.fields}))[:120]}).",
+        "sample_type_change": lambda: f"{n} sample(s) changed sample-type code in {file}.",
+        "id_format_change": lambda: f"{n} sample ID(s) in {file} changed case or whitespace.",
+        "value_shift": lambda: (f"{n} sample(s) in {file} changed values. {sum('one-way transfer' in c.evidence for c in chs)} "
+                                "of them now carry another sample's previous profile while that sample's own profile changed "
+                                "too, and nothing moved back: a one-way transfer, not a confirmed swap."
+                                if any("one-way transfer" in c.evidence for c in chs) else
+                                f"{n} sample(s) in {file} changed values without a swap or copy."),
+        "coverage_loss": lambda: (f"{chs[0].evidence[0].upper() + chs[0].evidence[1:]}: all {n} sample(s) lost it."
+                                  if " removed from the new release's " in chs[0].evidence else
+                                  f"Missing data rose in {file} for {n} sample(s)."),
+    }[kind]()
+    if sub and kind == "duplicate" and sub.startswith("copied"):
+        s += f" By release-A labels: {sub}."
+    elif sub:
+        s += f" Affected samples by release-A labels: {sub}."
+    if count_note:
+        s += f" {count_note}"
+    if kind != "swap" and n <= 6:
+        s += f" Samples: {', '.join(ids)}."
+    return s
+
+
+def _ref(ch: Change, release_name: str, note: str | None = None) -> dict:
+    r = {"kind": "sample", "id": ch.sample_id, "release": release_name, "file": ch.file}
+    if note:
+        r["note"] = note[:300]
+    return r
+
+
+def build(changes: list[Change], release_a: Release, release_b: Release,
+          hash_a: str = "file", hash_b: str = "content", verify_unaffected: bool | None = None,
+          question: str | None = None) -> dict:
+    """question: a question-card id. When given, the top-level question and verdict are that card's.
+    Every supported card is always assessed and listed under "questions"."""
+    from .questions import BY_ID, CARDS, assess
+    if question is not None and question not in BY_ID:
+        raise ValueError(f"unknown question card {question!r}; supported: {', '.join(BY_ID)}")
+    verify = CONFIG["verify_unaffected"] if verify_unaffected is None else verify_unaffected
+    change_finding: dict[int, str] = {}
+    A, B = release_a.name, release_b.name
+    impacts = map_impact(changes, release_a, release_b)
+
+    # ---- reruns + verdicts
+    analyses_out, verdicts, unexplained = [], {}, []
+    for a in ANALYSES:
+        imp = impacts[a.id]
+        rerun = imp.affected or verify
+        if not all(release_a.has(f) and release_b.has(f) for f in a.files):
+            analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
+                                 "why": f"Missing input file(s): {a.files}", "title": a.title})
+            verdicts[a.id] = "Insufficient Evidence"
+            continue
+        gaps = [f"release {r.name} has no {g}" for r in (release_a, release_b) for g in missing_inputs(a, r)]
+        if gaps:  # a field this analysis needs was dropped: say so instead of crashing
+            analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
+                                 "why": f"Can't rerun {a.id}: " + "; ".join(gaps) + ".", "title": a.title,
+                                 "impact": impacts[a.id].why(len(changes)), "inputs": a.files, "cohort": a.cohort})
+            verdicts[a.id] = "Insufficient Evidence"
+            continue
+        empty = [r.name for r in (release_a, release_b) if not _eligible(a, r)]
+        if empty:  # nothing to analyse is not evidence that nothing changed: never Ready on an empty cohort
+            analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
+                                 "why": f"Can't rerun {a.id}: no samples in its cohort ({a.cohort}) in release "
+                                        f"{' or '.join(empty)}.", "title": a.title,
+                                 "impact": impacts[a.id].why(len(changes)), "inputs": a.files, "cohort": a.cohort})
+            verdicts[a.id] = "Insufficient Evidence"
+            continue
+        before = after = mv = sd = None
+        if rerun:
+            before, after = a.run(release_a), a.run(release_b)
+            mv = a.compare(before, after)
+            sd = slice_diff(a.slice(release_a), a.slice(release_b))
+        v = release_verdict(imp.affected, mv, sd)
+        verdicts[a.id] = v.verdict
+        if mv is not None and not imp.affected and (mv.moved or sd.any):
+            unexplained.append((a, mv, sd))
+        entry = {"id": a.id, "status": "not_rerun" if mv is None else ("changed" if mv.moved else "unchanged"),
+                 "title": a.title, "verdict": v.verdict, "why": v.reason, "impact": imp.why(len(changes)),
+                 "inputs": a.files, "cohort": a.cohort}
+        if mv is not None:
+            entry["before"], entry["after"] = public(before), public(after)
+            entry["rerun_reason"] = "affected by detected changes" if imp.affected else \
+                "verification rerun: the impact map said unaffected"
+            entry["input_changes"] = sd.counts()  # sample by sample, exactly what it reads
+        analyses_out.append(entry)
+
+    # ---- findings + repairs
+    findings, repairs = [], []
+    a_count = {f: _count(release_a, f) for f in {c.file for c in changes}}
+    b_count = {f: _count(release_b, f) for f in {c.file for c in changes}}
+    for idx in _group(changes):
+        chs = [changes[i] for i in idx]
+        ch0, kind, file = chs[0], chs[0].change_type, chs[0].file
+        fid = f"F{len(findings) + 1}"
+        change_finding.update({i: fid for i in idx})
+        affects = sorted({aid for aid, imp in impacts.items() if set(idx) & set(imp.touched_by)})
+        not_aff = sorted(set(impacts) - set(affects))
+        ids = {c.sample_id for c in chs} | {c.related_sample_id for c in chs if c.related_sample_id}
+        sub = ""
+        count_note = ""
+        if release_a.has("clinical.tsv"):
+            if kind == "duplicate" and any(c.related_sample_id for c in chs):
+                src = _subgroups({c.related_sample_id for c in chs if c.related_sample_id}, release_a.clinical)
+                own = _subgroups({c.sample_id for c in chs}, release_a.clinical)
+                sub = f"copied from samples labelled {src}" + (f"; the copies sit under IDs labelled {own}" if own else "")
+            else:
+                sub = _subgroups(ids, release_a.clinical)
+                conc = _concentration(ids, release_a.clinical)
+                if conc:
+                    count_note = conc
+        if kind in ("appeared", "disappeared") and a_count.get(file) is not None and a_count.get(file) == b_count.get(file):
+            count_note = (count_note + " " if count_note else "") + f"The total sample count in {file} is unchanged ({a_count[file]}), so a count check would miss this."
+        side = A if kind in ("disappeared", "coverage_loss") else B
+        evidence = []
+        for c in chs:
+            evidence.append(_ref(c, side, c.evidence or None))
+            if c.related_sample_id and kind == "swap":
+                evidence.append({"kind": "sample", "id": c.related_sample_id, "release": B, "file": file})
+        fk = FEATURE_KIND.get(file)
+        for f in sorted({f for c in chs for f in c.fields})[:20]:
+            evidence.append({"kind": fk, "id": f} if fk else {"kind": "file", "id": file, "note": f"column {f}"})
+        evidence = _dedupe(evidence)
+        severity = BASE_SEVERITY[kind] if affects else "low"  # provisional; _rate_severity sets the final value
+        findings.append({
+            "id": fid, "kind": ch0.finding_kind, "summary": _summary(kind, chs, file, sub, count_note),
+            "severity": severity, "confidence": "high" if kind != "value_shift" else "medium",
+            "evidence": evidence, "affects_analyses": affects, "not_affected_analyses": not_aff,
+            "limitation": LIMITATION[kind], "needs_human_review": True,
+        })
+        action, rside, just = REPAIR[kind]
+        if kind == "value_shift" and any("one-way transfer" in c.evidence for c in chs):
+            just = "Ask the data provider whether these profiles were moved on purpose; keep them out until confirmed."
+        rname = A if rside == "A" else B
+        # A swap's repair covers both samples; any other repair covers only the changed samples. In particular,
+        # excluding duplicates must never touch the original they were copied from.
+        repair_ids = ids if kind == "swap" else {c.sample_id for c in chs}
+        targets = _dedupe([{"kind": "sample", "id": i, "release": rname, "file": file} for i in sorted(repair_ids)])
+        repairs.append({"id": f"R{len(repairs) + 1}", "action": action, "targets": targets,
+                        "justification": just.format(A=A, file=file) + " Proposed only; never applied automatically.",
+                        "addresses": [fid]})
+
+    unexplained_finding: dict[str, str] = {}
+    for a, mv, sd in unexplained:
+        fid = f"F{len(findings) + 1}"
+        unexplained_finding[a.id] = fid
+        moved = f"moved between releases ({mv.magnitude})" if mv.moved else "didn't move, but its inputs changed"
+        ev = [{"kind": "analysis", "id": a.id, "note": f"inputs: {', '.join(a.files)}"}]
+        ev += [{"kind": "sample", "id": s, "release": B, "note": "entered the data this analysis reads"} for s in sd.added]
+        ev += [{"kind": "sample", "id": s, "release": A, "note": "left the data this analysis reads"} for s in sd.removed]
+        ev += [{"kind": "sample", "id": s, "release": B, "note": f"{x} -> {y}"} for s, x, y in sd.changed]
+        findings.append({
+            "id": fid, "kind": "other",
+            "summary": f"{a.id} ({a.title}) {moved}, and no detected change explains it. Sample by sample, the data it "
+                       f"reads changed for {len(sd.added) + len(sd.removed) + len(sd.changed)} sample(s): "
+                       f"{len(sd.added)} entered, {len(sd.removed)} left, {len(sd.changed)} with different values; "
+                       f"{sd.identical} are identical.",
+            "severity": "high", "confidence": "high",
+            "evidence": ev,
+            "affects_analyses": [a.id], "not_affected_analyses": sorted(set(impacts) - {a.id}),
+            "limitation": "Caught by Driftwire's own check of what each analysis reads, not by the detector: every "
+                          "changed sample is listed, but the kind of change (swap, copy, relabel) isn't classified.",
+            "needs_human_review": True,
+        })
+        repairs.append({"id": f"R{len(repairs) + 1}", "action": "flag_for_review",
+                        "targets": [{"kind": "analysis", "id": a.id}],
+                        "justification": f"Hold {a.id} results until a curator finds what changed in {', '.join(a.files)}. "
+                                         "Proposed only; never applied automatically.", "addresses": [fid]})
+
+    # ---- biological consistency: receptor labels that contradict the tumor's own molecular data. Runs on both
+    # releases, so it also reports errors that were already in the trusted one (a plain comparison can't see those).
+    from .concordance import MARKER_TEXT, discordances
+    label_findings: dict[str, str] = {}
+    try:
+        now_d, before_d = discordances(release_b), discordances(release_a)
+    except (KeyError, ValueError, FileNotFoundError):
+        now_d, before_d = [], []
+    sample_finding = {norm_id(e["id"]): f["id"] for f in findings for e in f.get("evidence", []) if e.get("kind") == "sample"}
+    for marker in ("ER", "HER2"):
+        ds = [d for d in now_d if d.marker == marker]
+        if not ds:
+            continue
+        old = {(d.sample, d.label) for d in before_d if d.marker == marker}
+        already = [d for d in ds if (d.sample, d.label) in old]
+        linked = sorted({sample_finding[norm_id(d.sample)] for d in ds if norm_id(d.sample) in sample_finding})
+        fid = f"F{len(findings) + 1}"
+        art = "an" if marker == "ER" else "a"
+        summary = (f"{len(ds)} sample(s) carry {art} {marker} label that contradicts their own molecular data "
+                   f"({MARKER_TEXT[marker]}). {len(already)} of them were already like this in release {A}, so a "
+                   "comparison of releases alone could never catch them.")
+        if len(ds) > len(already):
+            k = len(ds) - len(already)
+            summary += f" {k} {'is' if k == 1 else 'are'} new in release {B}"
+            summary += f", and are also part of {', '.join(linked)}." if linked else "."
+        findings.append({
+            "id": fid, "kind": "label_conflict", "summary": summary,
+            "severity": "medium", "confidence": "medium",
+            "evidence": [{"kind": "sample", "id": d.sample, "release": B, "file": "clinical.tsv",
+                          "note": d.evidence + ("" if (d.sample, d.label) in old else f" (new in release {B})")}
+                         for d in ds],
+            "affects_analyses": [], "not_affected_analyses": sorted(impacts),
+            "limitation": "A molecular value far from its labelled group is evidence, not proof: tumor heterogeneity, "
+                          "assay thresholds or a true borderline case can explain it. Driftwire never relabels a sample.",
+            "needs_human_review": True,
+        })
+        label_findings[fid] = ER_COL if marker == "ER" else "HER2_Final_Status_nature2012"
+        repairs.append({"id": f"R{len(repairs) + 1}", "action": "flag_for_review",
+                        "targets": [{"kind": "sample", "id": d.sample, "release": B, "file": "clinical.tsv"} for d in ds],
+                        "justification": f"Ask pathology or the data provider to re-check the {marker} status of these "
+                                         "samples; keep them out of model training until it's confirmed. Proposed only; "
+                                         "never applied automatically.", "addresses": [fid]})
+
+    # ---- repair previews: what each repair would do to the analyses if approved (on a copy; nothing applied)
+    from .repair_preview import preview
+    for r in repairs:
+        try:
+            r["preview"] = preview(r, release_a, release_b)
+        except (KeyError, ValueError, FileNotFoundError) as e:
+            r["preview"] = {"note": f"Preview unavailable: {e}"}
+    from .repair_preview import preview_all
+    try:
+        all_repairs_preview = preview_all(repairs, release_a, release_b)
+    except (KeyError, ValueError, FileNotFoundError) as e:
+        all_repairs_preview = {"note": f"Preview unavailable: {e}"}
+
+    # ---- question cards: same release, a verdict per supported question
+    by_analysis = {x["id"]: x for x in analyses_out}
+    questions = []
+    for card in CARDS:
+        q = assess(card, changes, release_a, release_b, by_analysis)
+        rel = {change_finding[i] for i in q.pop("relevant_changes") if i in change_finding}
+        if card.analysis_id in unexplained_finding:
+            rel.add(unexplained_finding[card.analysis_id])
+        rel |= {fid for fid, col in label_findings.items() if card.label == col}
+        q["relevant_findings"] = sorted(rel, key=lambda f: int(f[1:]))
+        questions.append(q)
+    for f in findings:
+        f["relevant_questions"] = [q["id"] for q in questions if f["id"] in q["relevant_findings"]]
+        _rate_severity(f, by_analysis, {q["id"]: q for q in questions})
+
+    names = " and ".join(f"{a.id} ({a.title})" for a in ANALYSES)
+    top_q = f"Did release {B} change anything that affects analyses {names}?"
+    top_v = worst(verdicts.values())
+    if question is not None:
+        card_q = next(q for q in questions if q["id"] == question)
+        top_q = f"Given release {B}: {card_q['title']} (intended use: {card_q['intended_use']})"
+        top_v = card_q["verdict"]
+    doc = {
+        "format_version": "0.2",
+        "producer": {"team": CONFIG["producer_team"], "product": "Cohort Control Tower", "track": "cohort-firewall",
+                     "tool": f"Driftwire {__version__}"},
+        "data": {"dataset": "TCGA-BRCA", "releases": [
+            {"name": A, "files": release_a.fingerprints(hash_a)},
+            {"name": B, "files": release_b.fingerprints(hash_b)}]},
+        "question": top_q,
+        "verdict": top_v,
+        "findings": findings,
+        "analyses": analyses_out,
+        "repairs": repairs,
+        "questions": questions,
+        "repair_preview_all": all_repairs_preview,
+        "settings": {k: v for k, v in CONFIG.items() if k != "producer_team"},
+        "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
+    }
+    from .next_steps import build_plan
+    doc["next_steps"] = build_plan(doc)  # what to do next, and what Driftwire can't tell you
+    from .sources import add_slide_links
+    add_slide_links(doc)  # each cited sample links to its tissue slide in the public IDC viewer
+    from .receipt import stamp
+    return stamp(doc, question)  # anyone with the same releases can re-check this with `driftwire verify`
+
+
+def _rate_severity(f: dict, analyses: dict, questions: dict) -> None:
+    """Severity = how much the change could move a research answer, with the reason written down.
+
+    Uses the verdicts of the analyses it touches and the release part of the questions it touches (not check gaps).
+    Those verdicts reflect all changes together, so the reason says "overall"."""
+    hits = [(aid, analyses[aid]["verdict"]) for aid in f.get("affects_analyses", []) if aid in analyses]
+    hits += [(qid, questions[qid]["release_part"]["verdict"]) for qid in f.get("relevant_questions", []) if qid in questions]
+    blocked = [n for n, v in hits if v == "Blocked"]
+    shaky = [n for n, v in hits if v in ("Conditional", "Insufficient Evidence")]
+    if blocked:
+        f["severity"] = "high"
+        f["severity_reason"] = f"It feeds results that are Blocked overall: {', '.join(blocked)}."
+    elif shaky:
+        f["severity"] = "medium"
+        f["severity_reason"] = (f"It changes inputs of {', '.join(shaky)}; those results stay within tolerance "
+                                "or lose samples, but aren't blocked.")
+    elif hits:
+        f["severity"] = "low"
+        f["severity_reason"] = f"It touches {', '.join(n for n, _ in hits)}, but none of their answers moved."
+    else:
+        f["severity"] = "low"
+        f["severity_reason"] = "It touches no reference analysis or supported research question."
+
+
+def _count(r: Release, file: str):
+    try:
+        if file == "clinical.tsv":
+            return int(len(r.clinical))
+        if file == "protein_rppa.tsv.gz":
+            return int(r.protein.shape[1])
+    except FileNotFoundError:
+        return None
+    return None
+
+
+def _dedupe(refs: list[dict]) -> list[dict]:
+    seen, out = set(), []
+    for r in refs:
+        k = (r.get("kind"), r.get("id"), r.get("release"), r.get("file"))
+        if k not in seen:
+            seen.add(k)
+            out.append(r)
+    return out

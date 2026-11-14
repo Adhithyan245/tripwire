@@ -1,0 +1,42 @@
+# Driftwire release gate: copy to .github/workflows/ in the repo where your data releases land.
+# Every pull request that changes a release is compared with the trusted release. The pull request fails when the
+# verdict is Blocked (change FAIL_ON to "Conditional" to be stricter), and findings.json plus the readable report
+# are attached to the run for a person to review. Nothing is changed in your data. Research use only.
+name: Driftwire release gate
+
+on:
+  pull_request:
+    paths: ["releases/**"]
+  workflow_dispatch:
+
+env:
+  TRUSTED: releases/trusted       # the release your analyses were built on
+  NEW: releases/candidate         # the release in this pull request
+  QUESTION: ""                    # optional question-card id, e.g. predict_er_from_protein
+  FAIL_ON: Blocked                # Conditional | Insufficient Evidence | Blocked
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Adhithyan245/tripwire   # Driftwire
+          path: driftwire
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r driftwire/requirements.txt
+      - name: Compare releases
+        run: |
+          cd driftwire
+          python -m driftwire diff "$GITHUB_WORKSPACE/$TRUSTED" "$GITHUB_WORKSPACE/$NEW" \
+            --out "$GITHUB_WORKSPACE/driftwire-out/findings.json" --fail-on "$FAIL_ON" \
+            ${QUESTION:+--question "$QUESTION"}
+      - name: Attach findings for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: driftwire-findings
+          path: driftwire-out/

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driftwire</title>
+<meta name="description" content="Driftwire finds what silently changed between two releases of a dataset, shows which results it breaks, and hands a person the decision.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d2433'/%3E%3Cpath d='M6 17h20' stroke='%23ff5a4e' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='17' r='3.5' fill='%23fab219'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Main">
+    <a class="logo" href="#run" aria-label="Driftwire home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9"/><path d="M6 17h20"/><circle cx="16" cy="17" r="3.5"/></svg>
+    </a>
+    <nav id="nav" class="nav"></nav>
+    <button id="theme" class="nav-btn theme" type="button" aria-label="Switch light or dark theme" title="Theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    </button>
+  </aside>
+
+  <div class="main">
+    <header class="bar">
+      <div class="bar-title">
+        <span class="word">Driftwire</span>
+        <span class="crumbs" id="crumbs"></span>
+      </div>
+      <div class="bar-actions">
+        <label class="search" title="Find a sample">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="search" type="search" placeholder="Find a sample ID" autocomplete="off" aria-label="Find a sample ID">
+        </label>
+        <button id="bell" class="icon-btn" type="button" aria-label="Open reviews">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+          <span id="bellCount" class="badge" hidden></span>
+        </button>
+        <button id="export" class="btn small" type="button" title="Download findings.json with your review decisions">Export</button>
+      </div>
+    </header>
+    <main id="view" class="view" tabindex="-1"></main>
+  </div>
+</div>
+
+<aside id="drawer" class="drawer" aria-label="Reviewer" hidden></aside>
+<div id="scrim" class="scrim" hidden></div>
+<div id="drop" class="dropall" hidden><div>Drop a Driftwire <span class="mono">findings.json</span> to open it</div></div>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<input id="file" type="file" accept=".json,application/json" hidden>
+<script src="app.js"></script>
+</body>
+</html>

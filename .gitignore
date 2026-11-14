@@ -15,3 +15,17 @@ CHANGES.json
 out/
 findings*.json
 !tests/fixtures/**
+
+# local editor and agent settings
+.claude/
+
+# Vercel CLI link
+.vercel/
+
+# the replay page's recorded run (findings only, no raw data)
+!site/data/
+!site/data/*.replay.json
+
+# blind red-team: edited data and the private answer key never go in git
+redteam/work/
+redteam/answer_key.md
