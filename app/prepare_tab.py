@@ -4,7 +4,7 @@ A separate entry point; the release comparison and demo flow are unchanged. Noth
 verdict: it only produces a prepared copy and a mapping record.
 
 AI is opt-in. Only column names, file metadata (name, size, row and column counts) and the research question are
-sent, never dataset rows. The suggestion backend is plugged in at one hook (`_backend()` below) and is being built
+sent, never dataset rows. The suggestion backend plugs in at one hook (`_backend()` below): tripwire/prepare.py, which wraps Role 3's intake_prototype
 separately; until it's there, "Suggest mappings" says AI is unavailable and the manual path works the same way.
 No API key is read or stored by this screen.
 """
