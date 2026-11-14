@@ -7,13 +7,13 @@ Generate a controlled, research-only release copy and compare the installed dete
 Fetch the organizer's pinned data and check its checksums first. Given a release folder containing `clinical.tsv` and `protein_rppa.tsv.gz`:
 
 ```bash
-python -m tripwire.mutation_lab generate /path/to/release-A /path/to/new-release-B --scenario swap --seed 42 --truth /path/to/new-truth.json
-python -m tripwire.mutation_lab score /path/to/release-A /path/to/new-release-B --truth /path/to/new-truth.json
+python -m driftwire.mutation_lab generate /path/to/release-A /path/to/new-release-B --scenario swap --seed 42 --truth /path/to/new-truth.json
+python -m driftwire.mutation_lab score /path/to/release-A /path/to/new-release-B --truth /path/to/new-truth.json
 ```
 
 The target directory and truth file must not already exist (a symlink at either path counts as existing); put the truth file outside both release directories. The generator never changes the source and rejects nested source/target paths, sources containing symlinks or special files, and repeated column headers or sample IDs. All validation and mutation happen in memory before the target is created; if writing the release or the truth manifest fails or is interrupted, both are removed so a half-written case is never scored. Bad inputs give a one-line CLI error, not a traceback. Clean up generated files safely when finished. Avoid publishing identifiers or truth manifests derived from real releases. `--help` lists all options.
 
-Scenarios (`python -m tripwire.mutation_lab scenarios` lists them): `unchanged`, `reordered` (negative controls), `swap` (two sample-level records), `duplicate` (overwrite one profile with another; candidate for review), `disappeared` (remove one protein profile), `label_change` (flip an existing binary ER label), and `value_shift` (add 10 to one finite ERALPHA value whose shift is representable; `NA`, `inf` and values too large to change are skipped). Swap and duplicate pairs must differ numerically, so `1` versus `1.0` is not an observable swap. The seed makes the choice reproducible. Values are deliberately artificial; a no-change copy is not proof that a release is error-free.
+Scenarios (`python -m driftwire.mutation_lab scenarios` lists them): `unchanged`, `reordered` (negative controls), `swap` (two sample-level records), `duplicate` (overwrite one profile with another; candidate for review), `disappeared` (remove one protein profile), `label_change` (flip an existing binary ER label), and `value_shift` (add 10 to one finite ERALPHA value whose shift is representable; `NA`, `inf` and values too large to change are skipped). Swap and duplicate pairs must differ numerically, so `1` versus `1.0` is not an observable swap. The seed makes the choice reproducible. Values are deliberately artificial; a no-change copy is not proof that a release is error-free.
 
 Four more scenarios follow the plan's coverage list. All of them touch only `protein_rppa.tsv.gz`; `clinical.tsv` stays a byte-for-byte copy.
 

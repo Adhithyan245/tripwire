@@ -1,4 +1,4 @@
-"""What to do next, and what Tripwire can't tell you: a short, ordered plan built only from findings.json content.
+"""What to do next, and what Driftwire can't tell you: a short, ordered plan built only from findings.json content.
 
 The organizers' brief for Saturday: every working Control Tower finds the same changes, so show why they matter, what
 the user should do next, and what the tool can't tell them. Every step here cites the finding, repair or question it
@@ -84,7 +84,7 @@ def build_plan(doc: dict) -> dict:
                   "why": "Nothing they depend on changed.", "effect": None, "refs": []}]
 
     cannot = [
-        "Why a change happened. Tripwire sees that profiles moved or were copied, not the cause; the data provider "
+        "Why a change happened. Driftwire sees that profiles moved or were copied, not the cause; the data provider "
         "has to say.",
         "Errors already present in release A. A comparison only sees what differs between the two releases.",
         "Which of two conflicting values is correct (a relabel shows the old and the new value, not the truth).",

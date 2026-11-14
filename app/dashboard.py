@@ -1,4 +1,4 @@
-"""Tripwire dashboard (Role 4). Run from the repo root:  streamlit run app/dashboard.py
+"""Driftwire dashboard (Role 4). Run from the repo root:  streamlit run app/dashboard.py
 
 Pick release A and B (or open a sealed envelope), compare, see verdicts first, trace any finding to its evidence,
 record a review decision for every proposed repair, and download findings.json. Research use only.
@@ -43,9 +43,9 @@ VERDICT_HELP = {
     "Insufficient Evidence": "Too few samples, missing data, or a required check that didn't run. Never read as a pass.",
 }
 TOUR = [
-    ("Welcome to Tripwire",
+    ("Welcome to Driftwire",
      "A new data release can keep the **same sample count** while samples are swapped, copied or dropped underneath. "
-     "Tripwire compares two releases, finds what changed, works out which results that breaks, and says what it "
+     "Driftwire compares two releases, finds what changed, works out which results that breaks, and says what it "
      "can't see.\n\nThis tour takes under a minute. *Research use only: no diagnosis or clinical claims.*"),
     ("1 · Pick the releases",
      "In the **sidebar**: release A is your trusted baseline. Release B is the new release: pick a folder, or open a "
@@ -62,16 +62,16 @@ TOUR = [
      "it is, and its limitation. **Trace one sample** follows a sample from the file to the result it moved."),
     ("5 · Review, don't auto-fix",
      "In **Review**, a person approves, rejects or asks for more evidence on each proposed repair, with a reason. "
-     "Tripwire never applies a repair or changes source data. Decisions go into the exported findings.json."),
+     "Driftwire never applies a repair or changes source data. Decisions go into the exported findings.json."),
     ("6 · Test it, and know its limits",
-     "The **Mutation Lab** (sidebar → View) plants a known change and scores whether Tripwire finds it. **What "
-     "Tripwire can't see** lists its blind spots. **Data & export** downloads findings.json and the HTML report.\n\n"
+     "The **Mutation Lab** (sidebar → View) plants a known change and scores whether Driftwire finds it. **What "
+     "Driftwire can't see** lists its blind spots. **Data & export** downloads findings.json and the HTML report.\n\n"
      "Ready? Run the practice demo to see it all on real data."),
 ]
 VERDICT_COLOR = {"Ready": "green", "Conditional": "orange", "Insufficient Evidence": "orange", "Blocked": "red"}
 SEV_ICON = {"high": "🔴", "medium": "🟠", "low": "⚪", "none": "⚪"}
 LIMITS = [
-    "An error present in **both** releases is invisible to a release comparison: Tripwire needs a correct earlier "
+    "An error present in **both** releases is invisible to a release comparison: Driftwire needs a correct earlier "
     "baseline.",
     "A profile that several samples already share in release A identifies nobody, so matching it is never called a "
     "swap or a copy. A real copy of such a profile is reported only as a value change.",
@@ -79,11 +79,11 @@ LIMITS = [
     "are reported as value changes, not copies.",
     "The RNA file is not compared when the new release leaves it out (the envelopes do this by design).",
     "Tolerances and minimum sample counts are prototype policy choices, not clinical standards (see Data tab).",
-    "A swap or copy is inferred from the data; Tripwire can't know why it happened. Every one needs a curator.",
+    "A swap or copy is inferred from the data; Driftwire can't know why it happened. Every one needs a curator.",
     "Readiness checks that haven't been built are shown as unavailable and never count as a pass.",
 ]
 
-st.set_page_config(page_title="Tripwire", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="Driftwire", page_icon="🧭", layout="wide")
 sys.path.insert(0, str(ROOT / "app"))
 import ui  # noqa: E402  (the visual layer: stylesheet and HTML building blocks)
 
@@ -137,7 +137,7 @@ def verdict_badge(v: str) -> str:
 def practice_demo(root: pathlib.Path | None, a_path: str) -> None:
     """One click: open the public practice envelope if needed, compare it, show the result."""
     if root is None or not a_path:
-        st.session_state["demo_error"] = "The challenge repo or release A wasn't found; run `python -m tripwire doctor`."
+        st.session_state["demo_error"] = "The challenge repo or release A wasn't found; run `python -m driftwire doctor`."
         return
     opened = root / "envelopes" / "opened" / "practice" / "release"
     if not opened.is_dir():
@@ -295,7 +295,7 @@ if view == "Mutation Lab":
 if source == "Compare releases" and doc is None:
     html(ui.home("Catch the silent changes in a data release",
                  "A new release can keep the same number of samples while some are swapped, copied or dropped. "
-                 "Tripwire finds every change, works out which results it breaks, and gives each one a verdict "
+                 "Driftwire finds every change, works out which results it breaks, and gives each one a verdict "
                  "with the evidence behind it."))
     c1, c2, c3 = st.columns(3)
     with c1.container(border=True):
@@ -310,7 +310,7 @@ if source == "Compare releases" and doc is None:
              'words, then press Compare releases. You can also upload a findings.json.</div>')
     with c3.container(border=True):
         html('<div class="tw-step">Proof</div><div class="tw-ct">Prove it catches changes</div>'
-             '<div class="tw-cm">Switch the sidebar View to Mutation Lab: plant a known change and watch Tripwire '
+             '<div class="tw-cm">Switch the sidebar View to Mutation Lab: plant a known change and watch Driftwire '
              'find it blind.</div>')
     st.markdown("#### What the verdicts mean")
     html(ui.legend(VERDICT_HELP))
@@ -359,7 +359,7 @@ if _plan:
     with p2:
         html(ui.cannot_tell(_plan))
 
-tabs = st.tabs(["Verdicts", "Findings & evidence", f"Review ({len(status['open'])} open)", "What Tripwire can't see",
+tabs = st.tabs(["Verdicts", "Findings & evidence", f"Review ({len(status['open'])} open)", "What Driftwire can't see",
                 "Data & export"])
 
 # ------------------------------------------------------------------ verdicts
@@ -491,7 +491,7 @@ with tabs[2]:
 # ------------------------------------------------------------------ limitations
 
 with tabs[3]:
-    st.subheader("What Tripwire can't see")
+    st.subheader("What Driftwire can't see")
     for item in LIMITS:
         st.markdown(f"- {item}")
     gaps = sorted({c for q in doc.get("questions", []) for k in ("skipped", "unavailable", "missing")

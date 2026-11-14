@@ -19,7 +19,7 @@ From the repository root, with Python 3.11+ and the dependencies installed:
 
 ```bash
 python -m pip install -r requirements.txt
-python -m tripwire.mutation_lab scenarios
+python -m driftwire.mutation_lab scenarios
 python -m pytest -q tests/test_mutation_lab.py tests/test_mutation_extended.py tests/test_detector_mutation_integration.py
 ```
 

@@ -8,7 +8,7 @@ labels: plan-change
 ## What changes
 <!-- Exactly which part of PLAN.md or docs/CONTRACT.md, before and after. -->
 
-## Why it makes Tripwire better
+## Why it makes Driftwire better
 <!-- Rubric points, robustness on the unseen release, or demo risk. "Nicer" is not enough. -->
 
 ## Cost

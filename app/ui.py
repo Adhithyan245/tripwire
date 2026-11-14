@@ -112,7 +112,7 @@ def sev_pill(severity: str) -> str:
 
 
 def brand(team: str) -> str:
-    return (f'<div class="tw-brand"><div class="tw-mark">T</div><div class="tw-name">Tripwire</div></div>'
+    return (f'<div class="tw-brand"><div class="tw-mark">T</div><div class="tw-name">Driftwire</div></div>'
             f'<div class="tw-sub">Cohort Control Tower · team {esc(team)}</div>')
 
 
@@ -194,4 +194,4 @@ def plan(p: dict, limit: int = 6) -> str:
 
 def cannot_tell(p: dict) -> str:
     items = "".join(f"<li>{esc(c)}</li>" for c in p.get("cannot_tell", []))
-    return f'<div class="tw-plan"><h4>What Tripwire can\'t tell you</h4><ul class="tw-cant">{items}</ul></div>'
+    return f'<div class="tw-plan"><h4>What Driftwire can\'t tell you</h4><ul class="tw-cant">{items}</ul></div>'

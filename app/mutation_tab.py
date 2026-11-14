@@ -1,4 +1,4 @@
-"""Mutation Lab tab: plant a known change in a copy of release A, let Tripwire find it blind, and score the result.
+"""Mutation Lab tab: plant a known change in a copy of release A, let Driftwire find it blind, and score the result.
 
 Generated releases go to a temporary folder and are deleted after each run. Synthetic test data only.
 """
@@ -62,7 +62,7 @@ def totals(score: dict) -> tuple[int, int, int]:
 
 def render(st, release_a: str) -> None:
     st.subheader("Mutation Lab")
-    st.write("Plant a known change in a copy of release A. Tripwire isn't told what was planted; it has to find it, "
+    st.write("Plant a known change in a copy of release A. Driftwire isn't told what was planted; it has to find it, "
              "and the lab scores what it found against what was planted. Nothing is ever written to release A.")
     if not release_a or not pathlib.Path(release_a, "clinical.tsv").exists():
         st.warning("Set release A in the sidebar first (it needs clinical.tsv and protein_rppa.tsv.gz).")
@@ -72,7 +72,7 @@ def render(st, release_a: str) -> None:
     scenario = c1.selectbox("Change to plant", list(ALL), format_func=lambda s: f"{s}: {ALL[s]}", key="lab_scn")
     seed = c2.number_input("Seed", 0, 999, 1, key="lab_seed", help="Same seed, same planted samples.")
     if c3.button("Plant and detect", type="primary", use_container_width=True):
-        with st.spinner("Copying release A, planting the change, running Tripwire blind…"):
+        with st.spinner("Copying release A, planting the change, running Driftwire blind…"):
             try:
                 st.session_state["lab_one"] = run_one(release_a, scenario, int(seed))
             except Exception as e:
@@ -91,7 +91,7 @@ def render(st, release_a: str) -> None:
         found = {(c.change_type, c.file, c.sample_id) for c in r["observed"]}
         want = {(c.change_type, c.file, c.sample_id) for c in r["truth"]}
         rows = [{"planted": f"{c.change_type} · {c.sample_id}", "file": c.file,
-                 "found by Tripwire": "✓" if (c.change_type, c.file, c.sample_id) in found else "✗ missed"}
+                 "found by Driftwire": "✓" if (c.change_type, c.file, c.sample_id) in found else "✗ missed"}
                 for c in r["truth"][:50]]
         if rows:
             st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
@@ -103,7 +103,7 @@ def render(st, release_a: str) -> None:
 
     st.divider()
     st.subheader("Scorecard: every scenario")
-    st.write("Runs every scenario over several seeds and reports, per change type, how many planted changes Tripwire "
+    st.write("Runs every scenario over several seeds and reports, per change type, how many planted changes Driftwire "
              "caught, missed, and how many it reported that weren't planted.")
     seeds = st.slider("Seeds per scenario", 1, 5, 1, key="lab_nseeds",
                       help=f"About {len(SCENARIO_NAMES) * 3} seconds per seed on a laptop.")
