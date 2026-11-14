@@ -142,6 +142,10 @@ frozenset({
 - Show: "With your consent, column names, filename, row count, and your
   research question will be sent to OpenAI. Data rows are not sent. Review
   those details for sensitive information before consenting."
+- Future-product note: "A production version could use a locally hosted AI
+  model so that dataset metadata and research questions remain within the
+  user's environment. Local processing is planned, not implemented in this
+  prototype; additional security controls would still be required."
 - Buttons: **Consent & Continue** / **Skip AI (Manual Only)**
 - If user skips, go directly to Screen 3 (manual mapping).
 
