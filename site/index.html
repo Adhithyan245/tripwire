@@ -3,68 +3,54 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tripwire Replay</title>
-<meta name="description" content="Step through a real Tripwire run: what silently changed between two data releases, what it breaks, and what to do next.">
+<title>Tripwire</title>
+<meta name="description" content="Tripwire finds what silently changed between two releases of a dataset, shows which results it breaks, and hands a person the decision.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e2a3a'/%3E%3Cpath d='M4 17h24' stroke='%23ff5a4e' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='17' r='4' fill='%23fab219'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d2433'/%3E%3Cpath d='M6 17h20' stroke='%23ff5a4e' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='17' r='3.5' fill='%23fab219'/%3E%3C/svg%3E">
 </head>
 <body>
-<header class="top">
-  <div class="brand">
-    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M4 17h24"/><circle cx="16" cy="17" r="4"/></svg>
-    <div>
-      <div class="name">Tripwire</div>
-      <div class="tag">What silently changed in a data release, and what it breaks</div>
-    </div>
+<div class="app">
+  <aside class="side" aria-label="Main">
+    <a class="logo" href="#run" aria-label="Tripwire home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9"/><path d="M6 17h20"/><circle cx="16" cy="17" r="3.5"/></svg>
+    </a>
+    <nav id="nav" class="nav"></nav>
+    <button id="theme" class="nav-btn theme" type="button" aria-label="Switch light or dark theme" title="Theme">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    </button>
+  </aside>
+
+  <div class="main">
+    <header class="bar">
+      <div class="bar-title">
+        <span class="word">Tripwire</span>
+        <span class="crumbs" id="crumbs"></span>
+      </div>
+      <div class="bar-actions">
+        <label class="search" title="Find a sample">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="search" type="search" placeholder="Find a sample ID" autocomplete="off" aria-label="Find a sample ID">
+        </label>
+        <button id="bell" class="icon-btn" type="button" aria-label="Open reviews">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+          <span id="bellCount" class="badge" hidden></span>
+        </button>
+        <button id="export" class="btn small" type="button" title="Download findings.json with your review decisions">Export</button>
+      </div>
+    </header>
+    <main id="view" class="view" tabindex="-1"></main>
   </div>
-  <div class="top-actions">
-    <label class="btn ghost" title="Load a findings.json or .replay.json from any Tripwire run">
-      <input id="file" type="file" accept=".json,application/json" hidden>
-      <span>Load a run</span>
-    </label>
-    <a id="fullApp" class="btn ghost" href="#run-it">Full app</a>
-    <button id="theme" class="btn icon" type="button" aria-label="Switch light or dark theme">◐</button>
-  </div>
-</header>
-
-<section class="run-bar" aria-label="This run">
-  <div class="releases">
-    <div class="rel"><span class="k">Trusted release</span><span id="relA" class="v mono">…</span></div>
-    <div class="arrow" aria-hidden="true">→</div>
-    <div class="rel"><span class="k">New release</span><span id="relB" class="v mono">…</span></div>
-  </div>
-  <div id="overall" class="overall" aria-live="polite"></div>
-</section>
-
-<nav class="stages" id="stages" aria-label="Steps"></nav>
-
-<main id="stage" class="stage" tabindex="-1"></main>
-
-<div class="player">
-  <button id="prev" class="btn" type="button" aria-label="Previous step">‹ Back</button>
-  <button id="play" class="btn primary" type="button">▶ Play</button>
-  <button id="next" class="btn" type="button" aria-label="Next step">Next ›</button>
-  <div class="progress" aria-hidden="true"><span id="bar"></span></div>
 </div>
 
-<section id="run-it" class="run-it">
-  <h2>Run it on your own releases</h2>
-  <p>This page replays a recorded run. Tripwire itself is a command-line tool and a dashboard that run on your machine, on any two releases:</p>
-  <pre class="mono"><code>python -m tripwire diff &lt;trusted release&gt; &lt;new release&gt;
-streamlit run app/dashboard.py</code></pre>
-  <p>Drop the <span class="mono">findings.json</span> it writes onto this page (or use <b>Load a run</b>) to replay it here.</p>
-</section>
-
-<footer class="foot">
-  <p id="ruo">Research use only. Not a diagnosis, treatment advice, risk score or clinical claim.</p>
-  <p>Data: TCGA-BRCA frozen release via the OncoSys challenge. Slide links: NCI Imaging Data Commons (CC BY 3.0). Team Skill issue.</p>
-</footer>
-
-<div id="drop" class="drop" hidden><div>Drop a Tripwire findings.json to replay it</div></div>
+<aside id="drawer" class="drawer" aria-label="Reviewer" hidden></aside>
+<div id="scrim" class="scrim" hidden></div>
+<div id="drop" class="dropall" hidden><div>Drop a Tripwire <span class="mono">findings.json</span> to open it</div></div>
 <div id="tip" class="tip" role="tooltip" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<input id="file" type="file" accept=".json,application/json" hidden>
 <script src="app.js"></script>
 </body>
 </html>

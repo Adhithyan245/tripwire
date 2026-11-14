@@ -128,6 +128,7 @@ Tolerances and minimum sample counts are prototype policy choices, not clinical 
 | Anything at all | `python -m tripwire doctor`: it names the problem and the command that fixes it |
 | "challenge repo not found" | Clone it next to this repo (step 1), or set `TRIPWIRE_CHALLENGE_DIR` to its path |
 | "release A not fetched" or a checksum mismatch | `python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna` |
+| Mac: `SSL: CERTIFICATE_VERIFY_FAILED` while fetching | Python from python.org ships without certificates. Run `/Applications/Python 3.x/Install Certificates.command` once, or fetch with `SSL_CERT_FILE="$(python -c 'import certifi; print(certifi.where())')"` in front of the command. Certificate checks stay on either way |
 | `streamlit: command not found` | `python -m streamlit run app/dashboard.py` |
 | Windows: `UnicodeEncodeError` when unsealing directly | Use `python -m tripwire envelope …`, which handles it. Running `unseal.py` yourself needs `PYTHONUTF8=1` |
 | An envelope "doesn't open" | Check the number and the four words. Hyphens or spaces both work, and capitals don't matter |
