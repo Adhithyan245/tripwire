@@ -1,0 +1,50 @@
+name: deploy site
+
+# Deploys site/ (the static driftwire.vercel.app page) to the Vercel project "driftwire" in production.
+# Runs on every merge to dev that changes site/, or by hand: Actions -> deploy site -> Run workflow.
+# Anyone with write access to the repo can deploy this way; nobody needs a Vercel login.
+#
+# One-time setup by the Vercel account owner (repo Settings -> Secrets and variables -> Actions):
+#   secret   VERCEL_TOKEN       a Vercel access token (vercel.com/account/tokens), scoped to this account
+#   variable VERCEL_ORG_ID      the orgId in site/.vercel/project.json
+#   variable VERCEL_PROJECT_ID  the projectId in site/.vercel/project.json
+
+on:
+  push:
+    branches: [dev]
+    paths: ["site/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the deploy settings exist
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          missing=""
+          [ -n "$VERCEL_TOKEN" ] || missing="$missing VERCEL_TOKEN(secret)"
+          [ -n "$VERCEL_ORG_ID" ] || missing="$missing VERCEL_ORG_ID(variable)"
+          [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing VERCEL_PROJECT_ID(variable)"
+          if [ -n "$missing" ]; then echo "::error::Not set:$missing. See the setup notes at the top of this workflow."; exit 1; fi
+      - name: Deploy site/ to production
+        working-directory: site
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@62.2.0 deploy --prod --yes --token "$VERCEL_TOKEN"
