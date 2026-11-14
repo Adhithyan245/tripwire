@@ -155,6 +155,15 @@ result.save("findings.json")
 python -m driftwire diff releases/trusted releases/candidate --fail-on Blocked
 ```
 
+## Beyond oncology
+
+Driftwire is built and tested on TCGA-BRCA, but nothing in its approach is specific to cancer. Any medical dataset that ships in versions, such as an ECG cohort, a table of echocardiography measurements or an EHR extract for a cardiac study, can silently swap, copy or drop records between releases. Each new version raises the same question: is it still fit for this analysis, or this model?
+
+- **Release changes.** Fingerprinting each record, mapping changes to the analyses that read them, rerunning against stated tolerances and giving each question its own verdict all work the same way whatever the data measures.
+- **Labels that contradict the data.** The receptor check above has direct counterparts elsewhere. In cardiology, a "heart failure with reduced ejection fraction" label on a patient whose recorded ejection fraction is normal, or an atrial fibrillation diagnosis with no atrial fibrillation on the ECG, is the same kind of quietly mislabelled training example.
+
+Supporting a new domain means describing its files, analyses and question cards. The verdict rules, evidence, human review and `findings.json` stay the same. This hasn't been built or tested outside TCGA-BRCA yet.
+
 ## Troubleshooting
 
 | Problem | Fix |
