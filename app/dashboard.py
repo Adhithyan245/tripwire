@@ -182,6 +182,18 @@ def tour() -> None:
 if st.session_state.get("run_demo"):  # a demo needs the release-check view in compare mode
     st.session_state.update(view="Release check", source="Compare releases")
 root = challenge_dir()
+if root is None:  # hosted only: fetch the organizers' public data once per server (see app/hosted_bootstrap.py)
+    sys.path.insert(0, str(ROOT / "app"))
+    from hosted_bootstrap import ensure_challenge_repo
+
+    @st.cache_resource(show_spinner="First start on this server: downloading the organizers' public data…")
+    def _bootstrap():
+        return ensure_challenge_repo()
+    _boot_root, _boot_log = _bootstrap()
+    os.environ.setdefault("TRIPWIRE_CHALLENGE_DIR", str(_boot_root or ""))
+    root = challenge_dir()
+    if root is None:
+        st.sidebar.caption("Data download failed on this server: " + (_boot_log[-300:] or "no details"))
 st.sidebar.markdown(ui.brand("Skill issue"), unsafe_allow_html=True)
 view = st.sidebar.radio("View", ["Release check", "Run on your data", "Mutation Lab", "Prepare data with AI"], horizontal=True, key="view")
 t1, t2 = st.sidebar.columns(2)
