@@ -183,7 +183,7 @@ if st.session_state.get("run_demo"):  # a demo needs the release-check view in c
     st.session_state.update(view="Release check", source="Compare releases")
 root = challenge_dir()
 st.sidebar.markdown(ui.brand("Skill issue"), unsafe_allow_html=True)
-view = st.sidebar.radio("View", ["Release check", "Mutation Lab"], horizontal=True, key="view")
+view = st.sidebar.radio("View", ["Release check", "Mutation Lab", "Prepare data with AI"], horizontal=True, key="view")
 t1, t2 = st.sidebar.columns(2)
 if t1.button("Take the tour", use_container_width=True):
     st.session_state.update(tour_step=0, show_tour=True)
@@ -193,7 +193,7 @@ if t2.button("Practice demo", use_container_width=True,
     st.rerun()
 st.sidebar.markdown(ui.section("1 · Source"), unsafe_allow_html=True)
 source = st.sidebar.radio("Findings source", ["Compare releases", "Upload findings.json", "Synthetic example"],
-                          key="source", disabled=view == "Mutation Lab", label_visibility="collapsed")
+                          key="source", disabled=view != "Release check", label_visibility="collapsed")
 st.sidebar.markdown(ui.section("2 · Releases"), unsafe_allow_html=True)
 if root is None:
     st.sidebar.error("Challenge repo not found. Clone it next to this repo, or set TRIPWIRE_CHALLENGE_DIR.")
@@ -291,6 +291,15 @@ if view == "Release check":
     html(ui.app_bar())
 if st.session_state.get("demo_error"):
     st.error(st.session_state["demo_error"])
+
+if view == "Prepare data with AI":
+    try:
+        from prepare_tab import render as render_prepare
+    except ImportError:
+        sys.path.insert(0, str(ROOT / "app"))
+        from prepare_tab import render as render_prepare
+    render_prepare(st, html, ui)
+    st.stop()
 
 if view == "Mutation Lab":
     try:
