@@ -71,6 +71,15 @@
   const hideTip = () => { $("tip").hidden = true; };
 
   // ---------- data ----------
+  function fingerprint(d) {
+    const content = JSON.stringify([
+      d.findings.map((f) => [f.id, f.kind, f.summary, (f.evidence || []).map((e) => [e.kind, e.id, e.file, e.note])]),
+      (d.repairs || []).map((r) => [r.id, r.action, (r.targets || []).map((t) => [t.id, t.file, t.release])]),
+    ]);
+    let x = 5381;
+    for (let i = 0; i < content.length; i++) x = ((x << 5) + x + content.charCodeAt(i)) >>> 0;
+    return x.toString(36) + content.length.toString(36);
+  }
   function relNames() {
     const rel = (doc.data && doc.data.releases) || [];
     return [(doc.replay && doc.replay.release_a) || (rel[0] && rel[0].name) || "release A",
@@ -90,7 +99,9 @@
     kindColor = {}; let i = 1;
     for (const f of d.findings) if (!(f.kind in kindColor)) kindColor[f.kind] = `var(--c${Math.min(i++, 8)})`;
     const [a, b] = relNames();
-    key = `${a}->${b}:${d.findings.map((f) => f.id + f.kind).join(",")}`;
+    // Saved reviews belong to this exact content: if any finding's evidence or any repair's targets change, even with
+    // the same IDs, earlier decisions must not carry over to it.
+    key = `${a}->${b}:${fingerprint(d)}`;
     decisions = store.get(`tw-dec:${key}`, {});
     for (const x of d.decisions || []) if (!decisions[x.repair_id]) decisions[x.repair_id] = x;
     ticks = store.get(`tw-todo:${key}`, {});
