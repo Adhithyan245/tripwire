@@ -53,7 +53,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-On Windows: `py -3.11 -m venv .venv` then `.venv\Scriptsctivate`. Once it's active, `python` means the right
+On Windows: `py -3.11 -m venv .venv` then `.venv\Scripts\activate`. Once it's active, `python` means the right
 version for every command below.
 
 ```bash
