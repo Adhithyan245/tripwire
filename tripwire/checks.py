@@ -129,3 +129,23 @@ def event_count(card: QuestionCard, r: Release) -> CheckResult:
         return CheckResult("event_count", "insufficient",
                            f"fewer than {need} {ev_col} events for {', '.join(low)} ({text}){tail}", ev)
     return CheckResult("event_count", "pass", f"at least {need} {ev_col} events per group ({text}){tail}", ev)
+
+
+@register_check("label_concordance")
+def label_concordance(card: QuestionCard, r: Release) -> CheckResult:
+    """Receptor labels that contradict the sample's own molecular data (see concordance.py). A mislabelled training
+    sample teaches a model the wrong answer; in a descriptive comparison it sits in the wrong group."""
+    from .concordance import ER_COL, HER2_COL, discordances
+    marker = {ER_COL: "ER", HER2_COL: "HER2"}.get(card.label)
+    if marker is None:
+        return CheckResult("label_concordance", "skipped", f"no molecular cross-check is defined for {card.label}")
+    elig = card.eligible(r)
+    flagged = [d for d in discordances(r) if d.marker == marker and norm_id(d.sample) in elig]
+    if not flagged:
+        return CheckResult("label_concordance", "pass",
+                           f"no {marker} label strongly contradicts its own molecular data among this question's samples")
+    ev = [{"kind": "sample", "id": d.sample, "file": "clinical.tsv", "note": d.evidence} for d in flagged]
+    return CheckResult("label_concordance", "fixable",
+                       f"{len(flagged)} {marker} label(s) contradict the sample's own molecular data "
+                       f"({', '.join(d.sample for d in flagged[:4])}{'…' if len(flagged) > 4 else ''})",
+                       ev, fix=f"have the {marker} status of these samples re-checked, or leave them out until confirmed")

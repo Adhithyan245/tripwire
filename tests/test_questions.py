@@ -26,12 +26,15 @@ def test_same_release_different_question_different_verdict(releases, all_checks_
     x, y = er_pair(clinical, protein)
     write(b, clinical, swapped(protein, x, y))
     ch = [Change(x, "swap", "protein_rppa.tsv.gz", related_sample_id=y)]
-    q = qv(build(ch, Release(a), Release(b)))
+    doc = build(ch, Release(a), Release(b))
+    q = qv(doc)
     assert q["subtype_mix"]["verdict"] == "Ready"
     assert q["er_protein_by_er_status"]["verdict"] in ("Conditional", "Blocked")          # follows A1's tolerance
     assert q["predict_er_from_protein"]["verdict"] == "Blocked"                           # training: integrity blocks
     assert "swap" in q["predict_er_from_protein"]["why"]
-    assert q["predict_er_from_protein"]["relevant_findings"] == ["F1"]
+    rel = q["predict_er_from_protein"]["relevant_findings"]
+    kinds = {f["id"]: f["kind"] for f in doc["findings"]}
+    assert rel[0] == "F1" and all(kinds[x] == "label_conflict" for x in rel[1:])
     assert q["subtype_mix"]["relevant_findings"] == []
 
 
