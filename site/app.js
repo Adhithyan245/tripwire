@@ -1,4 +1,4 @@
-/* Tripwire web app. Opens a recorded Tripwire run (findings.json, optionally with the "replay" block written by
+/* Driftwire web app. Opens a recorded Driftwire run (findings.json, optionally with the "replay" block written by
    scripts/build_replay.py) and lets a person walk it: run, scan, findings with review, questions, next steps.
    Every number on screen comes from that file. Review decisions are kept in this browser and exported in the
    shared format's `decisions` section (same shape as tripwire/review.py). */
@@ -85,7 +85,7 @@
   const hitsIn = (file) => doc.findings.flatMap((f) => samplesOf(f).filter((e) => e.file === file).map((e) => ({ id: e.id, f, e })));
 
   function accept(d) {
-    if (!d || !Array.isArray(d.findings) || !Array.isArray(d.analyses)) throw new Error("this isn't a Tripwire findings.json");
+    if (!d || !Array.isArray(d.findings) || !Array.isArray(d.analyses)) throw new Error("this isn't a Driftwire findings.json");
     doc = d;
     kindColor = {}; let i = 1;
     for (const f of d.findings) if (!(f.kind in kindColor)) kindColor[f.kind] = `var(--c${Math.min(i++, 8)})`;
@@ -147,7 +147,7 @@
     const fill = h("div", { class: "fill" });
     const label = h("span", {}, "Ready when you are");
     const secs = h("span", {}, doc.replay && doc.replay.seconds ? `recorded run: ${doc.replay.seconds} s` : "");
-    const btn = h("button", { class: "runbtn", type: "button", onclick: () => run() }, "Run Tripwire");
+    const btn = h("button", { class: "runbtn", type: "button", onclick: () => run() }, "Run Driftwire");
 
     async function run() {
       btn.disabled = true; btn.textContent = "Running…";
@@ -169,12 +169,12 @@
         h("div", { class: "enter" },
           h("div", { class: "eyebrow" }, "Cohort Control Tower · TCGA-BRCA"),
           h("h1", {}, "Catch what ", h("em", {}, "silently changed"), " in a data release, before it reaches a result."),
-          h("p", {}, "Tripwire compares a new release with the one you trust, sample by sample. It finds swapped, copied and missing samples, reruns only the analyses they touch, and tells you which research questions the release is still ready for. A person makes every call.")),
+          h("p", {}, "Driftwire compares a new release with the one you trust, sample by sample. It finds swapped, copied and missing samples, reruns only the analyses they touch, and tells you which research questions the release is still ready for. A person makes every call.")),
         miniScene()),
       h("div", { class: "zones" }, zone("TRUSTED", a, "a"), zone("NEW", b, "b")),
       h("div", { class: "runrow" }, btn,
         h("div", { class: "prog" }, h("div", { class: "track" }, fill), h("div", { class: "stage-l" }, label, secs)),
-        h("div", { class: "alt" }, "Ran Tripwire on your own releases? ",
+        h("div", { class: "alt" }, "Ran Driftwire on your own releases? ",
           h("button", { type: "button", onclick: () => $("file").click() }, "Open its findings.json"), " or drop it anywhere.")),
       h("section", { class: "how" }, [
         ["Fingerprint every sample", "Each sample's data gets a fingerprint in both releases, so a swap, a copy or a lost sample shows up even when the counts don't change."],
@@ -397,7 +397,7 @@
     const q = ($("search").value || "").trim().toUpperCase();
     const open = openReviews().length;
     v.append(head("Step 2 · Findings", doc.findings.length ? `${doc.findings.length} change${doc.findings.length > 1 ? "s" : ""}, each with its evidence` : "Nothing changed",
-      "Every finding names the exact samples, says how sure Tripwire is and what it can't know, and waits for a person. Sample IDs open the tissue slide in NCI's Imaging Data Commons viewer.",
+      "Every finding names the exact samples, says how sure Driftwire is and what it can't know, and waits for a person. Sample IDs open the tissue slide in NCI's Imaging Data Commons viewer.",
       h("span", { class: "pill" }, h("i", { style: `background:${open ? "var(--wire)" : "var(--ready)"}` }, open ? open : "✓"), open ? `${open} waiting for review` : "All reviewed")));
     const list = h("div", { class: "flist" });
     doc.findings.forEach((f, i) => {
@@ -545,7 +545,7 @@
           h("div", { style: "margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" },
             h("button", { class: "btn small navy", type: "button", onclick: exportDoc }, "Export findings.json"),
             openReviews().length ? h("button", { class: "btn small", type: "button", onclick: () => go("findings") }, "Review findings") : null)),
-        h("div", { class: "cant enter", style: "animation-delay:.16s" }, cantIcon(), h("h3", {}, "What Tripwire can't tell you"),
+        h("div", { class: "cant enter", style: "animation-delay:.16s" }, cantIcon(), h("h3", {}, "What Driftwire can't tell you"),
           h("ul", {}, (ns.cannot_tell || []).map((c) => h("li", {}, c))))),
       footer());
   }
@@ -556,7 +556,7 @@
   function footer() {
     return h("footer", { class: "foot" },
       h("div", {}, doc.research_use_only || "Research use only. Not a diagnosis, treatment advice, risk score or clinical claim."),
-      h("div", {}, "Data: TCGA-BRCA frozen release via the OncoSys challenge. Slides: NCI Imaging Data Commons (CC BY 3.0). This page opens recorded runs; Tripwire itself runs on your machine: python -m tripwire diff <trusted> <new>."));
+      h("div", {}, "Data: TCGA-BRCA frozen release via the OncoSys challenge. Slides: NCI Imaging Data Commons (CC BY 3.0). This page opens recorded runs; Driftwire itself runs on your machine: python -m driftwire diff <trusted> <new>."));
   }
 
   // ---------- export ----------
@@ -623,7 +623,7 @@
     fetch("data/practice.replay.json")
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((d) => { accept(d); route(); })
-      .catch(() => { $("view").replaceChildren(h("div", { class: "card pad" }, "No recorded run found. Drop a Tripwire findings.json on the page to open it.")); });
+      .catch(() => { $("view").replaceChildren(h("div", { class: "card pad" }, "No recorded run found. Drop a Driftwire findings.json on the page to open it.")); });
   }
   init();
 })();

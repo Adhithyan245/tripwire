@@ -1,4 +1,4 @@
-"""python -m tripwire diff <release_A_dir> <release_B_dir> [--out out/findings.json] [--changes changes.json]"""
+"""python -m driftwire diff <release_A_dir> <release_B_dir> [--out out/findings.json] [--changes changes.json]"""
 from __future__ import annotations
 
 import argparse
@@ -19,7 +19,7 @@ def main(argv=None):
         sys.stdout.reconfigure(errors="replace")
     except (AttributeError, ValueError):
         pass
-    p = argparse.ArgumentParser(prog="tripwire", description="Diff two TCGA-BRCA releases. Research use only.")
+    p = argparse.ArgumentParser(prog="driftwire", description="Diff two TCGA-BRCA releases. Research use only.")
     sub = p.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("diff", help="compare release B against release A and write findings.json")
     d.add_argument("release_a")
@@ -37,7 +37,7 @@ def main(argv=None):
     r.add_argument("findings")
     r.add_argument("--out", help="default: same name as the findings file, .html")
     d.add_argument("--question", help="question-card id: makes the top-level question and verdict that card's "
-                                      "(see `python -m tripwire questions`)")
+                                      "(see `python -m driftwire questions`)")
     sub.add_parser("questions", help="list the supported question cards")
     doc_p = sub.add_parser("doctor", help="check the setup and print exactly what to do next")
     doc_p.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
@@ -85,7 +85,7 @@ def main(argv=None):
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(doc, indent=2))
 
-    print(f"Tripwire: {a.name} -> {b.name}   overall verdict: {doc['verdict']}")
+    print(f"Driftwire: {a.name} -> {b.name}   overall verdict: {doc['verdict']}")
     for an in doc["analyses"]:
         print(f"  {an['id']:<3} {an['verdict']:<22} {an['why']}")
     print("  Questions:")

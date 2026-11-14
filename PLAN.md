@@ -1,19 +1,19 @@
-# Tripwire — Idea Brief and Team Plan
+# Driftwire — Idea Brief and Team Plan
 
 Nov 11, 2026 · @Adhithyan Aravind
 
 ## Summary
 
-We are building **Tripwire**, the Track 1 (Cohort Firewall) entry, based on the featured **Cohort Control Tower** product. Tripwire answers two questions about the frozen TCGA-BRCA data and gives every answer a verdict: **Ready, Conditional, Blocked or Insufficient Evidence**.
+We are building **Driftwire**, the Track 1 (Cohort Firewall) entry, based on the featured **Cohort Control Tower** product. Driftwire answers two questions about the frozen TCGA-BRCA data and gives every answer a verdict: **Ready, Conditional, Blocked or Insufficient Evidence**.
 
-1. **What silently changed in this new data release, and which analyses does it break?** Tripwire diffs two releases, finds swaps, duplicates and lost coverage, reruns only the affected analyses, and writes `findings.json` in the shared format.
-2. **Is this dataset ready for this research question?** The researcher picks a structured question card: intended use, cohort, label, inputs, required checks and acceptable limitations. Tripwire validates the card against the release, connects each finding to the questions it affects, runs the readiness checks (patient leakage, site confounding, sample size) and shows which checks ran and which didn't. The same release can get a different verdict for a different question, but only when the data and the written rules support the difference. Plain-English questions translated by an LLM come later, as an optional layer on top of the cards.
+1. **What silently changed in this new data release, and which analyses does it break?** Driftwire diffs two releases, finds swaps, duplicates and lost coverage, reruns only the affected analyses, and writes `findings.json` in the shared format.
+2. **Is this dataset ready for this research question?** The researcher picks a structured question card: intended use, cohort, label, inputs, required checks and acceptable limitations. Driftwire validates the card against the release, connects each finding to the questions it affects, runs the readiness checks (patient leakage, site confounding, sample size) and shows which checks ran and which didn't. The same release can get a different verdict for a different question, but only when the data and the written rules support the difference. Plain-English questions translated by an LLM come later, as an optional layer on top of the cards.
 
 Every verdict ends in a **recorded human review**: approve, reject or request more evidence, with the reason. A reviewer can **preview** a supported proposed action (for example, excluding a suspect sample from a descriptive analysis) on an overlay. A preview never changes source data and is not a repair.
 
-The differentiator is the **Mutation Lab**: Tripwire injects many kinds of change into a release, measures what it catches, and shows its own blind spots on screen.
+The differentiator is the **Mutation Lab**: Driftwire injects many kinds of change into a release, measures what it catches, and shows its own blind spots on screen.
 
-**Pitch line:** "Same sample count, different data. Tripwire tells you what changed, what it breaks, and what it can't see."
+**Pitch line:** "Same sample count, different data. Driftwire tells you what changed, what it breaks, and what it can't see."
 
 ## The hackathon: what shapes the build
 
@@ -53,7 +53,7 @@ The hidden test can be **a changed release or a changed research question**. Ful
 
 Sources: [event page](https://the-open-accelerator.com/hackathon/upcoming/OncoSysHack/), [challenge repo](https://github.com/disleveK/oncosys-hackathon-challenge), [RULES.md](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/RULES.md), [SUBMISSION\_CHECKLIST.md](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/SUBMISSION_CHECKLIST.md), [Cohort Control Tower brief](https://github.com/disleveK/oncosys-hackathon-challenge/blob/main/products/cohort-control-tower.md).
 
-## The problem and why Tripwire wins
+## The problem and why Driftwire wins
 
 A new data release can keep the same sample count while swapping, duplicating or dropping samples underneath. Any analysis or model built on it silently changes, and a count check won't notice.
 
@@ -67,13 +67,13 @@ Why this idea wins at this event:
 - **It shows its limits.** The on-screen blind-spot report is the inspectable limitation the rules require.
 - **It fits our past work.** It uses the same deterministic-verifier pattern as OpsPilot.
 
-**A real precedent.** In TCGA breast-cancer data, [Yoo et al., MODMatcher (2014)](https://doi.org/10.1371/journal.pcbi.1003790) reported eight misaligned tumor profile pairs among 317 samples, including a cross-aligned pair that suggests a swap. That is the failure pattern we test for. Honest scope: MODMatcher compared modalities within one dataset, while Tripwire compares releases, so it catches an analogous error only when a correct earlier baseline exists and the data type is covered. We never claim the historical error is in the event data, or that Tripwire would have found it.
+**A real precedent.** In TCGA breast-cancer data, [Yoo et al., MODMatcher (2014)](https://doi.org/10.1371/journal.pcbi.1003790) reported eight misaligned tumor profile pairs among 317 samples, including a cross-aligned pair that suggests a swap. That is the failure pattern we test for. Honest scope: MODMatcher compared modalities within one dataset, while Driftwire compares releases, so it catches an analogous error only when a correct earlier baseline exists and the data type is covered. We never claim the historical error is in the event data, or that Driftwire would have found it.
 
 **Honest weak spot:** several teams will build a Control Tower, and a plain dataframe diff may catch the practice changes. Our edge is impact mapping, verdicts, readiness checks and the Mutation Lab. Without them, we are just another diff.
 
 ## The product
 
-Tripwire has two modes that share one verdict engine, plus a Mutation Lab that tests both.
+Driftwire has two modes that share one verdict engine, plus a Mutation Lab that tests both.
 
 ### Mode 1: Release diff (the scored core)
 
@@ -84,11 +84,11 @@ Tripwire has two modes that share one verdict engine, plus a Mutation Lab that t
 5. Rerun only the affected analyses. Show before and after. Say why the rest were left alone.
 6. Give each analysis a verdict and write `findings.json`, with proposed repairs that are never auto-applied.
 
-**Practice target:** with practice release B, Tripwire must catch that membership changed even though the count didn't, flag A1 (ER-alpha protein by ER status) as affected, and leave A2 (RNA subtype mix) alone. It must reach that from logic, not hardcoding.
+**Practice target:** with practice release B, Driftwire must catch that membership changed even though the count didn't, flag A1 (ER-alpha protein by ER status) as affected, and leave A2 (RNA subtype mix) alone. It must reach that from logic, not hardcoding.
 
 ### Mode 2: Question readiness (question cards, the Question Gate)
 
-1. The researcher picks a **question card** from a small, explicitly supported set (`python -m tripwire questions`). Each card states the intended use (descriptive or model training), cohort, label, input files and fields, required checks and acceptable limitations.
+1. The researcher picks a **question card** from a small, explicitly supported set (`python -m driftwire questions`). Each card states the intended use (descriptive or model training), cohort, label, input files and fields, required checks and acceptable limitations.
 2. Code validates the card against the release: files present, columns and rows exist, cohort not empty. A card that needs data the release doesn't have gets "this data can't answer the question, and here's why". Nothing is guessed.
 3. Release changes are mapped to the card exactly as they are to analyses (file, field, cohort). Intended use changes the rule: for model training, a swap, duplicate or label change touching the inputs is **Blocked** (wrong labels, or copies across a train/test split); for a descriptive question, the analysis tolerance decides.
 4. Readiness checks run on the card:
@@ -112,7 +112,7 @@ Thresholds and minimums are prototype policy choices, not clinical standards. Th
 
 ### The Mutation Lab
 
-A generator injects change types into release A: swaps, duplicates, drops, label flips, sample-type code changes, ID case and whitespace changes, unit shifts in one data type, and missing data concentrated in one subgroup. Tripwire runs on each one. The interface shows detection rate per change type, including the ones we miss and why. During the demo, a judge picks a change type from a dropdown and watches Tripwire catch it.
+A generator injects change types into release A: swaps, duplicates, drops, label flips, sample-type code changes, ID case and whitespace changes, unit shifts in one data type, and missing data concentrated in one subgroup. Driftwire runs on each one. The interface shows detection rate per change type, including the ones we miss and why. During the demo, a judge picks a change type from a dropdown and watches Driftwire catch it.
 
 Evaluation rules: include **no-change controls** (a byte-identical copy and a reordered copy) to measure false positives. Report true positives, false positives and false negatives, with precision and recall per change type and their denominators, not one aggregate. Keep some seeded cases hidden from detector development. Exact profile equality is evidence to investigate, not proof of a mistaken identity. Results on planted changes don't establish accuracy on an unseen release, and we say so.
 
@@ -167,8 +167,8 @@ The demo puts the judge in control twice: once to break the data, once to ask a 
 | 0:00–0:20 | "Same sample count, different data." Show two releases with identical counts | The problem is real and invisible |
 | 0:20–1:00 | Drop in the new release. Verdicts appear: A1 Blocked or Conditional, A2 Ready, with the swapped samples listed | Detection plus impact mapping |
 | 1:00–1:30 | Click one changed sample and trace it to the files, fields and calculation. Show how far A1's result moved | One result the judge can verify |
-| 1:30–2:05 | Judge picks a change type from the Mutation Lab dropdown; Tripwire catches it live | Robustness on input we didn't prepare |
-| 2:05–2:40 | Judge switches between two question cards on the same release (e.g. "subtype mix" vs "train an ER model from protein"). The verdict changes, and Tripwire shows which rule and evidence made the difference, plus check coverage. The judge records a review decision | The 20-point research-question criterion, plus human review |
+| 1:30–2:05 | Judge picks a change type from the Mutation Lab dropdown; Driftwire catches it live | Robustness on input we didn't prepare |
+| 2:05–2:40 | Judge switches between two question cards on the same release (e.g. "subtype mix" vs "train an ER model from protein"). The verdict changes, and Driftwire shows which rule and evidence made the difference, plus check coverage. The judge records a review decision | The 20-point research-question criterion, plus human review |
 | 2:40–3:00 | Show the blind-spot panel: "We catch X of Y change types; here's what we miss" | One limitation the judge can inspect |
 
 **Backup:** a recorded video of the full run, in case anything fails live. Rehearse it at least twice on Saturday morning.
@@ -268,12 +268,14 @@ Tick these off before the Saturday 2:15 PM ET code freeze.
 - [x] Human-review flags shown in the interface
 - [x] No diagnosis, treatment advice, risk score or clinical claim
 - [x] Gitleaks run; no keys, tokens or private links *(clean Thu; re-run on the final commit Sat)*
-- [x] ~~AI runs with a local model or user-supplied key, shows sources, says when data can't answer~~ Not applicable: the optional AI features were cut (cut order step 1); the README states Tripwire uses no AI
+- [x] ~~AI runs with a local model or user-supplied key, shows sources, says when data can't answer~~ Not applicable: the optional AI features were cut (cut order step 1); the README states Driftwire uses no AI
 - [x] Third-party code and licenses listed; data credited
 - [ ] Demo video link in the README
 - [ ] Pitch rehearsed twice
 
 **Open questions:**
+
+- ~~Product name?~~ Renamed Tripwire to **Driftwire** on Nov 13 (owner's decision): the name matches its web address, driftwire.vercel.app. The code stays in the `tripwire/` package, and `python -m driftwire` and `python -m tripwire` both work.
 
 - ~~What does the official Track 1 rubric weight?~~ Published; see the rubric table above. Plan updated Nov 12 per accepted proposal #2 (by Hemnaath).
 - ~~Who owns each role?~~ Assigned Nov 12 (see Roles). Presenter: Role 4 (Annamayya); technical Q&A: Role 2 (Adhithyan).

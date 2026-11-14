@@ -4,7 +4,7 @@
   "team": "Skill issue",
   "product": "Cohort Control Tower",
   "track": "cohort-firewall",
-  "tool": "Tripwire 0.1.0"
+  "tool": "Driftwire 0.1.0"
  },
  "data": {
   "dataset": "TCGA-BRCA",
@@ -72,7 +72,7 @@
   {
    "id": "F1",
    "kind": "sample_swap",
-   "summary": "Profiles of TCGA-A8-A09K-01 and TCGA-B6-A0WX-01 in protein_rppa.tsv.gz appear exchanged between releases. Affected samples by release-A labels: subtype: 1 Basal, 1 LumA; ER: 1 Negative, 1 Positive.",
+   "summary": "Profiles of TCGA-A8-A09K-01 and TCGA-B6-A0WX-01 in protein_rppa.tsv.gz appear exchanged between releases. Affected samples by release-A labels: subtype: 1 LumA, 1 Basal; ER: 1 Positive, 1 Negative.",
    "severity": "high",
    "confidence": "high",
    "evidence": [
@@ -1086,7 +1086,7 @@
   ],
   "all_repairs_together": "A1: difference 3.051 -> 3.051 (0.0% relative; tolerance 5%) against release raw. Stays Conditional: the result matches, but it would read 694 samples, release A has 698; R3 only asks for a check, so it can't be previewed and is still open. Ready needs the same inputs, so a person signs off on the rest.; A2: largest subtype share shift 0.0 pp (tolerance 1.0 pp) against release raw.",
   "cannot_tell": [
-   "Why a change happened. Tripwire sees that profiles moved or were copied, not the cause; the data provider has to say.",
+   "Why a change happened. Driftwire sees that profiles moved or were copied, not the cause; the data provider has to say.",
    "Errors already present in release A. A comparison only sees what differs between the two releases.",
    "Which of two conflicting values is correct (a relabel shows the old and the new value, not the truth)."
   ]
@@ -1124,7 +1124,7 @@
     "in_b": true
    }
   ],
-  "seconds": 4.1,
+  "seconds": 7.5,
   "generated_by": "scripts/build_replay.py",
   "release_a": "raw",
   "release_b": "practice"

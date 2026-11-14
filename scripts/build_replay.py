@@ -1,8 +1,8 @@
-"""Build the data file for the replay page (site/) from a real Tripwire run.
+"""Build the data file for the replay page (site/) from a real Driftwire run.
 
     python scripts/build_replay.py <release A> <release B> --out site/data/practice.replay.json
 
-The file is Tripwire's own findings.json plus a small "replay" block: how many samples each file holds in each
+The file is Driftwire's own findings.json plus a small "replay" block: how many samples each file holds in each
 release, so the page can draw every sample and show which ones tripped the wire. Nothing is invented: every number
 the page shows comes from this file.
 """

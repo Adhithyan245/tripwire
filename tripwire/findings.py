@@ -21,9 +21,9 @@ BASE_SEVERITY = {"swap": "high", "duplicate": "high", "label_change": "high", "s
 LIMITATION = {
     "swap": "A swap is inferred from two profiles trading places between releases; the release doesn't say why.",
     "duplicate": "Identical or near-identical profiles strongly suggest copies, not new measurements.",
-    "appeared": "New samples may be legitimate additions; Tripwire can't tell additions from substitutions on its own.",
+    "appeared": "New samples may be legitimate additions; Driftwire can't tell additions from substitutions on its own.",
     "disappeared": "A dropped sample may be a deliberate withdrawal; ask the data provider.",
-    "label_change": "Tripwire sees that the value changed, not which value is correct.",
+    "label_change": "Driftwire sees that the value changed, not which value is correct.",
     "sample_type_change": "The sample-type code changed, which moves the sample in or out of primary-tumor cohorts.",
     "id_format_change": "Same sample under a reformatted ID; exact-match joins will silently drop it.",
     "value_shift": "Values moved without a swap or copy; could be a unit or normalisation change.",
@@ -244,7 +244,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
             "severity": "high", "confidence": "high",
             "evidence": ev,
             "affects_analyses": [a.id], "not_affected_analyses": sorted(set(impacts) - {a.id}),
-            "limitation": "Caught by Tripwire's own check of what each analysis reads, not by the detector: every "
+            "limitation": "Caught by Driftwire's own check of what each analysis reads, not by the detector: every "
                           "changed sample is listed, but the kind of change (swap, copy, relabel) isn't classified.",
             "needs_human_review": True,
         })
@@ -290,7 +290,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
     doc = {
         "format_version": "0.2",
         "producer": {"team": CONFIG["producer_team"], "product": "Cohort Control Tower", "track": "cohort-firewall",
-                     "tool": f"Tripwire {__version__}"},
+                     "tool": f"Driftwire {__version__}"},
         "data": {"dataset": "TCGA-BRCA", "releases": [
             {"name": A, "files": release_a.fingerprints(hash_a)},
             {"name": B, "files": release_b.fingerprints(hash_b)}]},
@@ -305,7 +305,7 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         "research_use_only": "Research output. Not a diagnosis, treatment advice, risk score or clinical claim.",
     }
     from .next_steps import build_plan
-    doc["next_steps"] = build_plan(doc)  # what to do next, and what Tripwire can't tell you
+    doc["next_steps"] = build_plan(doc)  # what to do next, and what Driftwire can't tell you
     from .sources import add_slide_links
     add_slide_links(doc)  # each cited sample links to its tissue slide in the public IDC viewer
     return doc

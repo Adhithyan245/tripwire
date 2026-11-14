@@ -1,4 +1,4 @@
-"""A malformed release must never stop Tripwire from writing findings.json."""
+"""A malformed release must never stop Driftwire from writing findings.json."""
 import pandas as pd
 
 from conftest import write

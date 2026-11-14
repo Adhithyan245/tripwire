@@ -1,6 +1,6 @@
 """Readiness checks for model-training questions: patient leakage and site confounding.
 
-Both report a *risk in this data*, not a demonstrated problem: Tripwire never sees the user's actual train/test split
+Both report a *risk in this data*, not a demonstrated problem: Driftwire never sees the user's actual train/test split
 or model. Thresholds are stated in config.py and are prototype policy, not clinical standards.
 """
 from __future__ import annotations
