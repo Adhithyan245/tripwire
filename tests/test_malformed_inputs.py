@@ -77,3 +77,21 @@ def test_fail_closed_if_any_internal_step_raises(releases, tmp_path, monkeypatch
     rc = main(["diff", str(a), str(b), "--out", str(out), "--no-report"])
     assert rc == INPUT_ERROR and not out.exists()
     assert "simulated internal failure" in capsys.readouterr().err
+
+
+def test_empty_cohort_is_insufficient_evidence_not_ready(releases, tmp_path):
+    """IDs that aren't TCGA barcodes put no sample in A1's or A2's cohort: that is no evidence, so never Ready."""
+    a, b, clinical, protein = releases
+    from conftest import write
+    ren = {s: f"SAMPLE{i:05d}" for i, s in enumerate(clinical["sampleID"])}
+    for d in (a, b):
+        write(d, clinical.assign(sampleID=clinical["sampleID"].map(ren)), protein.rename(columns=ren))
+    out = tmp_path / "findings.json"
+    rc = main(["diff", str(a), str(b), "--out", str(out), "--no-report"])
+    doc = json.loads(out.read_text(encoding="utf-8"))
+    an = {x["id"]: x for x in doc["analyses"]}
+    assert rc == 0 and doc["verdict"] != "Ready"
+    for aid in ("A1", "A2"):
+        assert an[aid]["verdict"] == "Insufficient Evidence" and "no samples in its cohort" in an[aid]["why"]
+    sub = next(q for q in doc["questions"] if q["id"] == "subtype_mix")
+    assert sub["verdict"] == "Insufficient Evidence"

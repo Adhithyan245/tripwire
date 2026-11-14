@@ -7,7 +7,7 @@ from . import __version__
 from .analyses import ANALYSES, ER_COL, PAM50_COL, missing_inputs, public, slice_diff
 from .config import CONFIG, worst
 from .contract import Change, norm_id
-from .impact import map_impact
+from .impact import _eligible, map_impact
 from .release import Release
 from .verdicts import release_verdict
 
@@ -160,6 +160,14 @@ def build(changes: list[Change], release_a: Release, release_b: Release,
         if gaps:  # a field this analysis needs was dropped: say so instead of crashing
             analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
                                  "why": f"Can't rerun {a.id}: " + "; ".join(gaps) + ".", "title": a.title,
+                                 "impact": impacts[a.id].why(len(changes)), "inputs": a.files, "cohort": a.cohort})
+            verdicts[a.id] = "Insufficient Evidence"
+            continue
+        empty = [r.name for r in (release_a, release_b) if not _eligible(a, r)]
+        if empty:  # nothing to analyse is not evidence that nothing changed: never Ready on an empty cohort
+            analyses_out.append({"id": a.id, "status": "not_rerun", "verdict": "Insufficient Evidence",
+                                 "why": f"Can't rerun {a.id}: no samples in its cohort ({a.cohort}) in release "
+                                        f"{' or '.join(empty)}.", "title": a.title,
                                  "impact": impacts[a.id].why(len(changes)), "inputs": a.files, "cohort": a.cohort})
             verdicts[a.id] = "Insufficient Evidence"
             continue
