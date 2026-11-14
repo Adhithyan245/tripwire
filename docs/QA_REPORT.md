@@ -1,5 +1,11 @@
 # Role 3 QA: integrated run
 
+## Saturday retest after fixes (11:16 AM ET)
+
+Tested Driftwire `6a34c5b550096246438c96fa2395d543cc42098f` with organizer commit `6e15a399a64ffbf80778db0b462ac239e70086b9` using the existing local environment and data. This is a retest, not a new fresh-clone timing. The two malformed-input crash regressions reported below were fixed in #44 and now pass without expected-failure markers. Full suite: **265 passed**, one pandas performance warning. The practice envelope was already open; comparison wrote findings in 3.4 seconds, the organizer validator returned `valid`, and the new `driftwire verify` reported `identical` on a separate rerun. Mutation Lab: **20/20** scenarios exactly matched with seed 7 in 31.3 seconds. Its generated cases are development tests, and the score does not verify partner or evidence correctness. Gitleaks scanned 44 reachable commits through `6a34c5b` and found no leaks. Repeat validation and Gitleaks on the final submitted commit.
+
+The following Saturday morning section is historical: its two expected failures were resolved by #44, and its secret scan and clean-clone timing apply to the earlier commit named there.
+
 ## Saturday November 14 QA (10:28–10:31 AM ET)
 
 Fresh macOS clone tested Driftwire `5e21febc1393e3656438766e1a6618a4711fb3c6` and organizer repo `6e15a399a64ffbf80778db0b462ac239e70086b9`, Python 3.13.12, new venv and five checksum-verified no-RNA files. Package downloads used the existing pip cache. The README data-fetch command initially failed with `CERTIFICATE_VERIFY_FAILED` at 22.37 seconds from the start; the README's `SSL_CERT_FILE`/certifi workaround succeeded with certificate verification enabled. Resuming from that point took 14.61 seconds through doctor, practice envelope and the organizer validator (`valid`). The sum of measured segments was 36.98 seconds **excluding the pause to diagnose and restart**; this is not an uninterrupted clean-clone time. The practice command itself took 5.60 seconds wall time, including 1.6 seconds reported for unsealing; system load and network/cache conditions affect these figures.
