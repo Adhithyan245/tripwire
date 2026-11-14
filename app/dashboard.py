@@ -304,7 +304,7 @@ if view == "Mutation Lab":
 if source == "Compare releases" and doc is None:
     html(ui.home("Catch the silent changes in a data release",
                  "A new release can keep the same number of samples while some are swapped, copied or dropped. "
-                 "Driftwire finds every change, works out which results it breaks, and gives each one a verdict "
+                 "Driftwire detects supported changes, checks which results they affect, and gives each one a verdict "
                  "with the evidence behind it."))
     c1, c2, c3 = st.columns(3)
     with c1.container(border=True):
