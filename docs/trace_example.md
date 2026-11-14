@@ -1,6 +1,6 @@
 # One finding, traced end to end: the sample swap (F1)
 
-Every value below is copied from a real run on the organizers' practice envelope (`python -m driftwire envelope practice orange meadow pilot lantern`, output `out/findings-practice.json`, result SHA-256 `e612c917c726c97c8fef3a7d2fc7a99867d0f2c3b66ba1a8826e866d582d15d5`) and from reading the two protein files directly.
+Every value below is copied from a real run on the organizers' practice envelope (`python -m driftwire envelope practice orange meadow pilot lantern`, output `out/findings-practice.json`, result SHA-256 `116597cde5b275fe373795724d6faec83b878ac608d82499cbf82c4a59e1cf15`) and from reading the two protein files directly.
 
 ## 1. The finding
 | Field | Value |

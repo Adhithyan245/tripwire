@@ -171,7 +171,7 @@
   {
    "id": "F3",
    "kind": "membership_change",
-   "summary": "5 sample(s) lost their data in protein_rppa.tsv.gz. Affected samples by release-A labels: subtype: 5 Her2; ER: 3 Negative, 1 Positive. All 5 are Her2, a subtype that is 7.0% of labelled samples in release A; by chance that would happen about 1 time in 591,446, so this change hit one subgroup. Questions that count or compare subtypes are hit hardest. The total sample count in protein_rppa.tsv.gz is unchanged (747), so a count check would miss this. Samples: TCGA-A8-A08J-01, TCGA-C8-A12Q-01, TCGA-C8-A26Y-01, TCGA-E9-A1RH-01, TCGA-GM-A2DH-01.",
+   "summary": "5 sample(s) lost their data in protein_rppa.tsv.gz. Affected samples by release-A labels: subtype: 5 Her2; ER: 3 Negative, 1 Positive. All 5 are Her2, a subtype that is 7.0% of labelled samples in release A. If the affected samples were random, all 5 sharing any one subtype this rare (at most 25% of samples; 4 subtypes tested) would happen about 1 time in 2,232, so this change hit one subgroup. Questions that count or compare subtypes are hit hardest. The total sample count in protein_rppa.tsv.gz is unchanged (747), so a count check would miss this. Samples: TCGA-A8-A08J-01, TCGA-C8-A12Q-01, TCGA-C8-A26Y-01, TCGA-E9-A1RH-01, TCGA-GM-A2DH-01.",
    "severity": "high",
    "confidence": "high",
    "evidence": [
@@ -1472,10 +1472,10 @@
  },
  "receipt": {
   "tool": "Driftwire 0.1.0",
-  "commit": "9680a54b344ba26f12d5b520387ce6b58f58f470",
+  "commit": "a653880747839ebac51f729a0520fdb431371294",
   "question": null,
   "inputs": "the sha256 of every input file is in data.releases",
-  "result_sha256": "e612c917c726c97c8fef3a7d2fc7a99867d0f2c3b66ba1a8826e866d582d15d5",
+  "result_sha256": "116597cde5b275fe373795724d6faec83b878ac608d82499cbf82c4a59e1cf15",
   "verify": "python -m driftwire verify findings.json <trusted release> <new release>"
  },
  "replay": {
@@ -1511,7 +1511,7 @@
     "in_b": true
    }
   ],
-  "seconds": 6.5,
+  "seconds": 9.4,
   "generated_by": "scripts/build_replay.py",
   "release_a": "raw",
   "release_b": "practice"
