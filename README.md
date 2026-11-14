@@ -4,6 +4,52 @@
 
 OncoSys AI Healthcare Hackathon, Nov 2026 · Team **Skill issue** · Track 1, Cohort Firewall · Product: Cohort Control Tower
 
+## Judge quickstart (under 2 minutes once installed)
+
+**Requirements:** Python 3.11 or newer and git. Tested from a fresh clone on Windows 11 with Python 3.11.0 ([full record](docs/clean_clone_run.md)); our QA also ran it on macOS with Python 3.13.
+
+First, clone the organizers' repo and this one side by side, then work from `tripwire/`:
+`git clone https://github.com/disleveK/oncosys-hackathon-challenge oncosys-challenge && git clone https://github.com/Adhithyan245/tripwire tripwire && cd tripwire`. A virtual environment is recommended ([setup](#quickstart-about-5-minutes)).
+
+```bash
+pip install -r requirements.txt && python ../oncosys-challenge/data/tcga-brca/fetch.py --no-rna
+```
+```bash
+python -m driftwire doctor
+```
+```bash
+python -m driftwire envelope practice orange meadow pilot lantern
+```
+
+**Expected output** of the last command (14 s on our laptop, including unsealing). From the real run:
+
+```
+Driftwire: raw -> practice   overall verdict: Conditional
+  A1  Conditional            Inputs changed; the result moved within tolerance (difference 3.051 -> 3.019 (1.0% relative; tolerance 5%)).
+  A2  Ready                  Nothing this analysis uses changed: the 844 samples it reads are identical in both releases; ...
+  Questions:
+   er_protein_by_er_status            Conditional
+   subtype_mix                        Ready
+   os_by_subtype                      Ready
+   predict_er_from_protein            Blocked
+   predict_subtype_from_copy_number   Conditional
+   predict_er_from_rna                Insufficient Evidence
+   predict_subtype_from_rna           Blocked
+  5 finding(s), 5 proposed repair(s) (none applied)
+  format/validate.py: valid
+```
+
+**What it means:** the practice release has the same sample counts as the trusted one, yet Driftwire finds a swap, 5 copied profiles, 5 samples that lost data, and receptor labels that contradict their own data. A1 still holds within tolerance and A2 is untouched. The same release is **Ready** for the subtype-mix and survival questions, but **Blocked** for training a model on protein, because the model would train on swapped and copied profiles. Re-check the result with `python -m driftwire verify out/findings-practice.json ../oncosys-challenge/data/tcga-brca/raw ../oncosys-challenge/envelopes/opened/practice/release` ("identical" in our fresh-clone run).
+
+**See also:**
+- [Live site](https://driftwire.vercel.app)
+- Demo video: VIDEO_LINK_TBD
+- [Seven verdicts on one release](#same-release-different-answers)
+- [One finding traced end to end](docs/trace_example.md)
+- [What the verdicts mean](#what-the-verdicts-mean)
+- [Full setup](#quickstart-about-5-minutes)
+- [Fresh-clone record](docs/clean_clone_run.md)
+
 **Live site: [driftwire.vercel.app](https://driftwire.vercel.app)**. Step through a real run on the practice release: the scan, the findings with review, the question cards and what to do next. You can also drop any Driftwire `findings.json` on it.
 
 You own a dataset that gets new releases. A new release can keep the same number of samples while some are swapped, copied or dropped, and a count check won't notice. Point Driftwire at the old release (A) and the new one (B). It:
