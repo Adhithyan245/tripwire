@@ -50,3 +50,13 @@ def test_gate_passes_an_unchanged_release(releases, tmp_path):
     a, b, clinical, protein = releases
     write(b, clinical, protein)
     assert main(["diff", str(a), str(b), "--out", str(tmp_path / "f.json"), "--no-report", "--fail-on", "Conditional"]) == 0
+
+
+def test_verdicts_command_prints_one_row_per_question_card(releases, capsys):
+    from tripwire.questions import CARDS
+    a, b, clinical, protein = releases
+    write(b, clinical, protein)
+    assert main(["verdicts", str(a), str(b)]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith("| Question | Use | Verdict |") and len(out) == 2 + len(CARDS)
+    assert any("**Blocked (circular)**" in line for line in out)  # the RNA subtype card is circular by design

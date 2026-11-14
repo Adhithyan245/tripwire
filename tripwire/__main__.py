@@ -45,6 +45,9 @@ def main(argv=None):
     v.add_argument("findings")
     v.add_argument("release_a", help="the trusted release folder")
     v.add_argument("release_b", help="the new release folder")
+    vt = sub.add_parser("verdicts", help="one release, every question card: verdict and written reason as a table")
+    vt.add_argument("release_a")
+    vt.add_argument("release_b")
     sub.add_parser("questions", help="list the supported question cards")
     doc_p = sub.add_parser("doctor", help="check the setup and print exactly what to do next")
     doc_p.add_argument("--challenge-dir", help="path to the challenge repo (default: next to this repo)")
@@ -66,6 +69,10 @@ def main(argv=None):
         return 0
 
 
+    if args.cmd == "verdicts":
+        from .api import check
+        print(verdict_table(check(args.release_a, args.release_b).doc))
+        return 0
     if args.cmd == "verify":
         from .receipt import verify
         outcome, details = verify(json.loads(pathlib.Path(args.findings).read_text(encoding="utf-8")),
@@ -130,6 +137,18 @@ def main(argv=None):
             return GATE_FAILED
         print(f"  gate: verdict {doc['verdict']} is below --fail-on {args.fail_on} -> pass")
     return 0
+
+
+def verdict_table(doc: dict) -> str:
+    """Markdown table: each question card's verdict and the first sentence of the reason Driftwire wrote."""
+    use = {"descriptive": "describe the data", "model_training": "train a model"}
+    rows = ["| Question | Use | Verdict | Driftwire's reason |", "| --- | --- | --- | --- |"]
+    for q in doc.get("questions", []):
+        why = (q.get("why") or "").replace("|", "/")
+        first = why.split(". ")[0].rstrip(".") + "."
+        verdict = q["verdict"] + (" (circular)" if why.startswith("Circular question") else "")
+        rows.append(f"| {q['title']} | {use.get(q.get('intended_use'), q.get('intended_use', ''))} | **{verdict}** | {first} |")
+    return chr(10).join(rows)
 
 
 VERIFY_FAILED = 5  # verify: the inputs or the result differ from the recorded run
