@@ -189,6 +189,13 @@ Exit codes: **0** means findings were written and the validator passed. **1** me
 - **Data & export:** a validator check and downloads.
 - **Mutation Lab** (its own view in the sidebar): plant a known change, or run the full scorecard.
 
+## What a review decision does (and doesn't) change
+
+A reviewer approves, rejects or asks for more evidence on each proposed repair, giving a role and a reason. On the practice run, approving R1 (restore the swapped pair) did this:
+- **Changes:** a `decisions` entry is added to `findings.json` (`original_preserved: true`), and the open-review list drops from F1–F5 to F2–F5. The HTML report gains a "Review decisions" table.
+- **Doesn't change:** the overall verdict (Conditional), any analysis or question verdict, the findings, or the "what to do next" plan. Verdicts describe the data as delivered, and the data itself is never changed.
+- **What approval *would* do** is shown before deciding, in the repair preview. For R1: A1 moves from 3.019 back to 3.054 (0.1% from release A).
+
 ## It also checks the labels themselves
 
 A comparison between releases can't see an error that was already in the trusted release. Driftwire adds one check that can: **receptor labels that contradict the tumor's own molecular data.** ER and HER2 status decide treatment and trial eligibility (rules such as "ER ≥ 1%" read exactly these labels), and a mislabelled sample silently corrupts any model or cohort built on it.
