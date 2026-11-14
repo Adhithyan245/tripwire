@@ -1,5 +1,15 @@
 # Role 3 QA: integrated run
 
+## Independent adversarial checks (November 13, Friday)
+
+Tripwire code commit `fc43279` was tested against the organizer's checksum-verified, five-file no-RNA release A. Mutation Lab ran all 20 existing scenario types with seeds 11, 29 and 47: **60/60 exact runs**, no reported extras, misses or execution errors, in 51.6 seconds on this Mac. Exact means matching change type, file and sample, not evidence accuracy or partner correctness. These are generated development cases, not held-out judge inputs; the vanished-file case contributes 1,080 sample-level records per run.
+
+An additional synthetic scenario not in that scorecard found a **known false swap-chain claim**: X takes Y's old profile, Y takes Z's old profile, and Z independently shifts all its values. No old profile closes the chain back to X. The detector nevertheless calls X and Y swaps and describes each as part of a swap chain. The findings layer makes a high-severity `sample_swap` and proposes restoring from the previous release; human review is required. A genuine three-way cycle was detected in a positive control. The simpler one-way-copy plus changed donor also produces an unsupported swap claim. These examples use wholly synthetic records, not the organizer answer key.
+
+Recommended detector-owner fix: build profile-transfer relationships and call a swap chain only when the evidence closes a cycle; treat open chains as unconfirmed transfers/value changes and avoid asserting an unproven reciprocal partner. Preserve evidence for the observed transfer and require human review. Test closed cycles, open chains, copies whose donors also change, ambiguous/shared profiles and near matches before changing classification. The reproducible open-chain test is a **strict expected failure** in `tests/test_adversarial_swap_chains.py`; remove the expected-failure marker after the behavior is fixed, rather than counting it as a pass.
+
+On the synthetic one-way case, question-specific verdicts differed as expected: ER protein descriptive `Conditional`, subtype mix `Ready`, and ER prediction from protein `Blocked`. This is one check of question-dependent behavior, not validation of all research questions. Full suite with the new controls: **235 passed, 1 expected failure**, and one pandas performance warning.
+
 ## November 13 rehearsal (Friday, America/New_York)
 
 This is a rehearsal, not the requested Saturday morning final check. A fresh macOS checkout tested Tripwire `e2f662b89948b0c99a30f2ecde1d2c9f86c16880` and organizer repo `d0fbebd53b16681ba939b61b38d3475e2c99aaab` with Python 3.13.12 and a new virtual environment. Five no-RNA release A files passed the published checksums.
