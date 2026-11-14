@@ -1,5 +1,9 @@
 # Role 3 QA: integrated run
 
+## Mixed-error test inspired by peer demos
+
+Added a dashboard Mutation Lab scenario combining a swap, an overwritten duplicate, a lost profile and an ER label change in one release. On the event's checksum-verified no-RNA release A, seeds 7, 42 and 71 each produced five distinct sample-level expected records; the detector matched **15/15 records**, with **0 extras and 0 misses**, and matched **9/9 expected partner/source references**. The truth is generated before the detector runs, but these are development cases, not independent held-out tests or a comparison to another team. On a real release, interacting or overlapping errors can be harder; this scenario deliberately keeps the chosen samples and partners disjoint to keep its truth unambiguous. It does not score evidence quality or question verdicts.
+
 ## Controlled incident evidence
 
 [INCIDENT_EVIDENCE.md](INCIDENT_EVIDENCE.md) adds a reproducible, literature-motivated QA experiment using a seeded synthetic swap, a count-only comparison, a no-change control, question-dependent outcomes and a ground-truth recovery. It measures partner accuracy separately and validates all three findings documents. It is a simulation, not a reproduction of an identified historical incident or a claim of superiority to an existing tool. Reproduce with `python scripts/qa/incident_replay.py <release-A> --seed 42 --out out/incident-replay-seed42`.

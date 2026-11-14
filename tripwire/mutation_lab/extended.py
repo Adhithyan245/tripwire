@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import shutil
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,7 @@ DESCRIPTIONS = {
     "relabel_pam50": "three samples' PAM50 subtype changed in clinical.tsv",
     "repeated_id": "one protein sample's column and one clinical row each listed twice (counted twice)",
     "resaved_clinical": "no-change control: clinical.tsv re-saved by another tool (55 -> 55.0)",
+    "mixed_changes": "simultaneous swap, duplicate, lost profile and clinical label change",
 }
 EXTENDED = tuple(DESCRIPTIONS)
 
@@ -61,9 +63,42 @@ def _primary(cols) -> list[str]:
     return [c for c in cols if str(c)[13:15] == "01"]
 
 
+def _mixed_changes(source: Path, target: Path, seed: int) -> list[Change]:
+    """Compose changes on distinct samples, retaining independent planted truth."""
+    from tripwire.mutation_lab.core import generate
+
+    source, target = source.resolve(), target.resolve()
+    if target.exists():
+        raise FileExistsError(f"target already exists: {target}")
+    if source == target or source in target.parents or target in source.parents:
+        raise ValueError("source and target must be separate, non-nested directories")
+    truth, used = [], set()
+    with tempfile.TemporaryDirectory(prefix="mixed-mutation-", dir=target.parent) as work:
+        work = Path(work)
+        current = source
+        for stage, kind in enumerate(("swap", "duplicate", "disappeared", "label_change")):
+            for attempt in range(40):
+                candidate = work / f"stage-{stage}-{attempt}"
+                changes = generate(current, candidate, kind, seed + stage * 1000 + attempt)
+                involved = {str(s).strip().upper() for c in changes
+                            for s in (c.sample_id, c.related_sample_id) if s}
+                if not involved.intersection(used):
+                    used.update(involved)
+                    truth.extend(changes)
+                    current = candidate
+                    break
+                shutil.rmtree(candidate)
+            else:
+                raise ValueError("not enough distinct samples for mixed mutations")
+        shutil.move(str(current), str(target))
+    return truth
+
+
 def generate_extended(source: Path, target: Path, scenario: str, seed: int = 0) -> list[Change]:
     if scenario not in DESCRIPTIONS:
         raise ValueError(f"unknown extended scenario {scenario!r}")
+    if scenario == "mixed_changes":
+        return _mixed_changes(Path(source), Path(target), seed)
     rng = random.Random(seed)
     nrng = np.random.default_rng(seed)
     _copy(source, target)
