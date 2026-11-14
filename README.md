@@ -4,6 +4,8 @@
 
 OncoSys AI Healthcare Hackathon, Nov 2026 · Team **Skill issue** · Track 1, Cohort Firewall · Product: Cohort Control Tower
 
+**Live site: [driftwire.vercel.app](https://driftwire.vercel.app)**. Step through a real run on the practice release: the scan, the findings with review, the question cards and what to do next. You can also drop any Driftwire `findings.json` on it.
+
 You own a dataset that gets new releases. A new release can keep the same number of samples while some are swapped, copied or dropped, and a count check won't notice. Point Driftwire at the old release (A) and the new one (B). It:
 
 1. finds every change, file by file (swaps, copies, appeared or lost samples, changed labels, value shifts);
