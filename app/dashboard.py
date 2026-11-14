@@ -233,6 +233,12 @@ load_example = st.sidebar.button("Load synthetic example") if source == "Synthet
 st.sidebar.divider()
 st.sidebar.caption("Research use only. Not a diagnosis, treatment advice, risk score or clinical claim.")
 
+def clear_document():
+    """Prevent a failed replacement from leaving an old result available for review/export."""
+    st.session_state.update(doc=None, secs=None, decisions={}, document_origin=None,
+                            upload_fingerprint=None, demo_error=None)
+
+
 def set_document(document, origin, seconds=None):
     generation = st.session_state.get("document_generation", 0) + 1
     existing = {d["repair_id"]: {k: d[k] for k in ("decision", "reason", "reviewer_role")}
@@ -242,6 +248,7 @@ def set_document(document, origin, seconds=None):
 
 
 if run:
+    clear_document()
     try:
         with st.spinner("Comparing every file, mapping impact, rerunning analyses…"):
             doc, secs = compare(a_path, b_path, question, changes_file or None)
@@ -253,6 +260,7 @@ if upload is not None:
     import hashlib
     fingerprint = hashlib.sha256(upload.getvalue()).hexdigest()
     if fingerprint != st.session_state.get("upload_fingerprint") or st.session_state.get("document_origin") != "upload":
+        clear_document()
         try:
             set_document(parse_findings(upload.getvalue()), "upload")
             st.session_state["upload_fingerprint"] = fingerprint
@@ -263,6 +271,7 @@ if load_example:
     set_document(parse_findings((ROOT / "app" / "synthetic.json").read_bytes()), "synthetic")
 
 if st.session_state.pop("run_demo", False):
+    clear_document()
     with st.spinner("Opening the practice envelope and comparing it with release A…"):
         try:
             practice_demo(root, a_path)
